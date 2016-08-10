@@ -1,4 +1,4 @@
-# gocroaring
+# gocroaring[![GoDoc](https://godoc.org/github.com/RoaringBitmap/gocroaring?status.svg)](https://godoc.org/github.com/RoaringBitmap/gocroaring)
 Go wrapper for CRoaring (a C/C++ implementation at https://github.com/RoaringBitmap/CRoaring)
 
 Roaring is  used by Apache Spark (https://spark.apache.org/), Apache Kylin (http://kylin.io),
@@ -83,6 +83,10 @@ func main() {
     }
 }
 ```
+
+### Documentation
+
+Current documentation is available at http://godoc.org/github.com/RoaringBitmap/gocroaring
 
 ### Compatibility with Java RoaringBitmap library
 
