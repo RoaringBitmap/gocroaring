@@ -15,6 +15,10 @@ func TestSimpleCard(t *testing.T) {
 	if c != 900 {
 		t.Error("Expected ", 900, ", got ", c)
 	}
+	bitmap.RunOptimize()
+	if c != 900 {
+		t.Error("Expected ", 900, ", got ", c)
+	}
 }
 
 func TestFancier(t *testing.T) {
@@ -26,30 +30,35 @@ func TestFancier(t *testing.T) {
 	rb1.Add(5)
 	rb1.Add(100)
 	rb1.Add(1000)
+	rb1.RunOptimize()
 	rb2 := NewBitmap()
 	rb2.Add(3)
 	rb2.Add(4)
 	rb2.Add(1000)
+	rb2.RunOptimize()
 	rb3 := NewBitmap()
 	fmt.Println("Cardinality: ", rb1.GetCardinality())
 	if rb1.GetCardinality() != 7 {
 		t.Error("Bad card")
-  }
-  if ! rb1.Contains(3) {
+	}
+	if !rb1.Contains(3) {
 		t.Error("should contain it")
-  }
+	}
 	rb1.And(rb2)
-  fmt.Println(rb1.ToArray())
-	rb3.Add(1)
+	fmt.Println(rb1)
 	rb3.Add(5)
 	rb3.Or(rb1)
+	fmt.Println(rb3.ToArray())
+	fmt.Println(rb3)
+	rb4 := FastOr(rb1, rb2, rb3)
+	fmt.Println(rb4)
 	// next we include an example of serialization
 	buf := make([]byte, rb1.GetSerializedSizeInBytes())
 	rb1.Write(buf) // we omit error handling
-	newrb,_ := Read(buf)
+	newrb, _ := Read(buf)
 	if rb1.Equals(newrb) {
 		fmt.Println("I wrote the content to a byte stream and read it back.")
 	} else {
 		t.Error("Bad read")
-  }
+	}
 }

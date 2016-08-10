@@ -59,20 +59,27 @@ func main() {
     rb1.Add(5)
     rb1.Add(100)
     rb1.Add(1000)
+    rb1.RunOptimize() // improves compression
     rb2 := gocroaring.NewBitmap()
     rb2.Add(3)
     rb2.Add(4)
     rb2.Add(1000)
+    rb2.RunOptimize() // improves compression
     rb3 := gocroaring.NewBitmap()
     fmt.Println("Cardinality: ", rb1.GetCardinality())
     fmt.Println("Contains 3? ", rb1.Contains(3))
     rb1.And(rb2)
+    // prints {3,4,1000}
+    fmt.Println(rb1)
     rb3.Add(1)
     rb3.Add(5)
     rb3.Or(rb1)
 
-    // prints 1, 3, 4, 5, 1000
     fmt.Println(rb3.ToArray())
+    fmt.Println(rb3)
+
+    rb4 := gocroaring.FastOr(rb1,rb2,rb3) // optimized way to compute unions between many bitmaps
+    fmt.Println(rb4)
 
     // next we include an example of serialization
     buf := make([]byte, rb1.GetSerializedSizeInBytes())

@@ -9,6 +9,9 @@ package gocroaring
 #include "roaring.h"
 */
 import "C"
+import "os"
+import "bytes"
+import "io"
 import "runtime"
 import "unsafe"
 import "errors"
@@ -28,14 +31,37 @@ func NewBitmap() *Bitmap {
 	return answer
 }
 
+// Print a description of the bitmap to stdout
+func (rb *Bitmap) Printf() {
+	C.roaring_bitmap_printf(rb.cpointer)
+	C.fflush(C.stdout)
+}
+
 // Add the integer x to the bitmap
 func (rb *Bitmap) Add(x uint32) {
 	C.roaring_bitmap_add(rb.cpointer, C.uint32_t(x))
+
 }
 
-// Optimize the compression of the bitmap (call this after populating a new bitmap), return true if the bitmap was modified
+// RunOptimize the compression of the bitmap (call this after populating a new bitmap), return true if the bitmap was modified
 func (rb *Bitmap) RunOptimize() bool {
 	return bool(C.roaring_bitmap_run_optimize(rb.cpointer))
+}
+
+// RemoveRunCompression  Remove run-length encoding even when it is more space efficient return whether a change was applied
+func (rb *Bitmap) RemoveRunCompression() bool {
+	return bool(C.roaring_bitmap_remove_run_compression(rb.cpointer))
+}
+
+// FastOr computes the union between many bitmaps quickly, as opposed to having to call Or repeatedly.
+// It might also be faster than calling Or repeatedly.
+func FastOr(bitmaps ...*Bitmap) *Bitmap {
+	number := len(bitmaps)
+	po := make([]*C.struct_roaring_bitmap_s, number)
+	for i, v := range bitmaps {
+		po[i] = v.cpointer
+	}
+	return &Bitmap{C.roaring_bitmap_or_many(C.size_t(number), (**C.struct_roaring_bitmap_s)(unsafe.Pointer(&po[0])))}
 }
 
 // Contains returns true if the integer is contained in the bitmap
@@ -137,14 +163,34 @@ func (rb *Bitmap) Write(b []byte) error {
 	return nil
 }
 
-
 // ToArray creates a new slice containing all of the integers stored in the Bitmap in sorted order
 func (rb *Bitmap) ToArray() []uint32 {
 	array := make([]uint32, rb.GetCardinality())
-  C.roaring_bitmap_to_uint32_array(rb.cpointer, (*C.uint32_t) (unsafe.Pointer(&array[0])))
+	C.roaring_bitmap_to_uint32_array(rb.cpointer, (*C.uint32_t)(unsafe.Pointer(&array[0])))
 	return array
 }
 
+// String creates a string representation of the Bitmap
+func (rb *Bitmap) String() string {
+	old := os.Stdout // keep backup of the real stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+	C.roaring_bitmap_printf(rb.cpointer)
+	C.fflush(C.stdout)
+	outC := make(chan string)
+	// copy the output in a separate goroutine so printing can't block indefinitely
+	go func() {
+		var buf bytes.Buffer
+		io.Copy(&buf, r)
+		outC <- buf.String()
+	}()
+
+	// back to normal state
+	w.Close()
+	os.Stdout = old // restoring the real stdout
+	out := <-outC
+	return out
+}
 
 // Read reads a serialized version of the bitmap (you need to call Free on it once you are done)
 func Read(b []byte) (*Bitmap, error) {
