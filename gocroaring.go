@@ -9,18 +9,28 @@ package gocroaring
 
 // mitigate cgo call overhead by adding many values at once.
 void roaring_bitmap_add_many(roaring_bitmap_t *r, const uint32_t *vals, int n){
+	// somewhat emprically found that about 1K is the break-even.
+	if(n < 1000) {
+		for(int i=0;i<n;i++){
+			roaring_bitmap_add(r, vals[i]);
+		}
+		return;
+	}
 	roaring_bitmap_t *ro = roaring_bitmap_of_ptr((size_t)n, vals);
 	roaring_bitmap_or_inplace(r, ro);
 }
 
 */
 import "C"
-import "os"
-import "bytes"
-import "io"
-import "runtime"
+import (
+	"bytes"
+	"errors"
+	"io"
+	"os"
+	"runtime"
+)
+
 import "unsafe"
-import "errors"
 
 func free(a *Bitmap) {
 	C.roaring_bitmap_free(a.cpointer)
@@ -73,7 +83,9 @@ func FastOr(bitmaps ...*Bitmap) *Bitmap {
 	for i, v := range bitmaps {
 		po[i] = v.cpointer
 	}
-	return &Bitmap{C.roaring_bitmap_or_many(C.size_t(number), (**C.struct_roaring_bitmap_s)(unsafe.Pointer(&po[0])))}
+	b := &Bitmap{C.roaring_bitmap_or_many(C.size_t(number), (**C.struct_roaring_bitmap_s)(unsafe.Pointer(&po[0])))}
+	runtime.SetFinalizer(b, free)
+	return b
 }
 
 // Contains returns true if the integer is contained in the bitmap
@@ -107,7 +119,9 @@ func (rb *Bitmap) Equals(o interface{}) bool {
 
 // Clone creates a copy of the Bitmap
 func (rb *Bitmap) Clone() *Bitmap {
-	return &Bitmap{C.roaring_bitmap_copy(rb.cpointer)}
+	b := &Bitmap{C.roaring_bitmap_copy(rb.cpointer)}
+	runtime.SetFinalizer(b, free)
+	return b
 }
 
 // And computes the intersection between two bitmaps and stores the result in the current bitmap
@@ -132,22 +146,30 @@ func (rb *Bitmap) AndNot(x2 *Bitmap) {
 
 // Or computes the union between two bitmaps and returns the result
 func Or(x1, x2 *Bitmap) *Bitmap {
-	return &Bitmap{C.roaring_bitmap_or(x1.cpointer, x2.cpointer)}
+	b := &Bitmap{C.roaring_bitmap_or(x1.cpointer, x2.cpointer)}
+	runtime.SetFinalizer(b, free)
+	return b
 }
 
 // And computes the intersection between two bitmaps and returns the result
 func And(x1, x2 *Bitmap) *Bitmap {
-	return &Bitmap{C.roaring_bitmap_and(x1.cpointer, x2.cpointer)}
+	b := &Bitmap{C.roaring_bitmap_and(x1.cpointer, x2.cpointer)}
+	runtime.SetFinalizer(b, free)
+	return b
 }
 
 // Xor computes the symmetric difference between two bitmaps and returns the result
 func Xor(x1, x2 *Bitmap) *Bitmap {
-	return &Bitmap{C.roaring_bitmap_xor(x1.cpointer, x2.cpointer)}
+	b := &Bitmap{C.roaring_bitmap_xor(x1.cpointer, x2.cpointer)}
+	runtime.SetFinalizer(b, free)
+	return b
 }
 
 // AndNot computes the difference between two bitmaps and returns the result
 func AndNot(x1, x2 *Bitmap) *Bitmap {
-	return &Bitmap{C.roaring_bitmap_andnot(x1.cpointer, x2.cpointer)}
+	b := &Bitmap{C.roaring_bitmap_andnot(x1.cpointer, x2.cpointer)}
+	runtime.SetFinalizer(b, free)
+	return b
 }
 
 // Flip negates the bits in the given range (i.e., [rangeStart,rangeEnd)), any integer present in this range and in the bitmap is removed,
@@ -157,7 +179,9 @@ func (rb *Bitmap) Flip(rangeStart, rangeEnd uint64) {
 
 // Flip negates the bits in the given range  (i.e., [rangeStart,rangeEnd)), any integer present in this range and in the bitmap is removed,
 func Flip(bm *Bitmap, rangeStart, rangeEnd uint64) *Bitmap {
-	return &Bitmap{C.roaring_bitmap_flip(bm.cpointer, C.uint64_t(rangeStart), C.uint64_t(rangeEnd))}
+	b := &Bitmap{C.roaring_bitmap_flip(bm.cpointer, C.uint64_t(rangeStart), C.uint64_t(rangeEnd))}
+	runtime.SetFinalizer(b, free)
+	return b
 }
 
 // GetSerializedSizeInBytes computes the serialized size in bytes  the Bitmap.
