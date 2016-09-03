@@ -21,6 +21,24 @@ func TestSimpleCard(t *testing.T) {
 	}
 }
 
+func TestAddMany(t *testing.T) {
+	rb1 := NewBitmap()
+	sl := []uint32{1, 2, 3, 6, 7, 8, 20, 44444}
+	rb1.AddSlice(sl)
+
+	if int(rb1.GetCardinality()) != len(sl) {
+		t.Errorf("cardinality: expected %d, got %d", rb1.GetCardinality(), len(sl))
+	}
+	if rb1.Contains(5) {
+		t.Error("didn't expect to contain 5")
+	}
+	for _, v := range sl {
+		if !rb1.Contains(v) {
+			t.Errorf("expected to contain %d", v)
+		}
+	}
+}
+
 func TestFancier(t *testing.T) {
 	rb1 := NewBitmap()
 	rb1.Add(1)

@@ -1,12 +1,18 @@
 // Package gocroaring is an wrapper for CRoaring in go
 // It provides a fast compressed bitmap data structure.
 // See http://roaringbitmap.org for details.
-
 package gocroaring
 
 /*
-#cgo CFLAGS: -march=native -O3  -Wa,-q
+#cgo CFLAGS: -march=native -O3  -Wa,-q -std=c99
 #include "roaring.h"
+
+// mitigate cgo call overhead by adding many values at once.
+void roaring_bitmap_add_many(roaring_bitmap_t *r, const uint32_t *vals, int n){
+	roaring_bitmap_t *ro = roaring_bitmap_of_ptr((size_t)n, vals);
+	roaring_bitmap_or_inplace(r, ro);
+}
+
 */
 import "C"
 import "os"
@@ -20,6 +26,7 @@ func free(a *Bitmap) {
 	C.roaring_bitmap_free(a.cpointer)
 }
 
+// Bitmap is the roaring bitmap
 type Bitmap struct {
 	cpointer *C.struct_roaring_bitmap_s
 }
@@ -31,7 +38,7 @@ func NewBitmap() *Bitmap {
 	return answer
 }
 
-// Print a description of the bitmap to stdout
+// Printf writes a description of the bitmap to stdout
 func (rb *Bitmap) Printf() {
 	C.roaring_bitmap_printf(rb.cpointer)
 	C.fflush(C.stdout)
@@ -41,6 +48,12 @@ func (rb *Bitmap) Printf() {
 func (rb *Bitmap) Add(x uint32) {
 	C.roaring_bitmap_add(rb.cpointer, C.uint32_t(x))
 
+}
+
+// AddSlice adds all integers in a slice to the bitmap
+func (rb *Bitmap) AddSlice(x []uint32) {
+	ptr := unsafe.Pointer(&x[0])
+	C.roaring_bitmap_add_many(rb.cpointer, (*C.uint32_t)(ptr), C.int(len(x)))
 }
 
 // RunOptimize the compression of the bitmap (call this after populating a new bitmap), return true if the bitmap was modified
