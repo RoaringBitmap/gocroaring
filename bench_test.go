@@ -30,12 +30,12 @@ func benchmarkAdd(b *testing.B, sl []uint32) {
 func benchmarkAddMany(b *testing.B, sl []uint32) {
 	for n := 0; n < b.N; n++ {
 		rb1 := gocroaring.NewBitmap()
-		rb1.AddSlice(sl)
+		rb1.Add(sl...)
 	}
 }
 
 func BenchmarkAddRandom(b *testing.B)  { benchmarkAdd(b, random) }
 func BenchmarkAddOrdered(b *testing.B) { benchmarkAdd(b, ordered) }
 
-func BenchmarkAddManyRandom(b *testing.B)  { benchmarkAddMany(b, random) }
-func BenchmarkAddManyOrdered(b *testing.B) { benchmarkAddMany(b, ordered) }
+func BenchmarkAddRandomArity(b *testing.B)  { benchmarkAddMany(b, random) }
+func BenchmarkAddOrderedArity(b *testing.B) { benchmarkAddMany(b, ordered) }
