@@ -44,16 +44,15 @@ func (rb *Bitmap) Printf() {
 	C.fflush(C.stdout)
 }
 
-// Add the integer x to the bitmap
-func (rb *Bitmap) Add(x uint32) {
-	C.roaring_bitmap_add(rb.cpointer, C.uint32_t(x))
+// Add the integer(s) x to the bitmap
+func (rb *Bitmap) Add(x ...uint32) {
+	if len(x) == 1 {
+		C.roaring_bitmap_add(rb.cpointer, C.uint32_t(x[0]))
+	} else {
+		ptr := unsafe.Pointer(&x[0])
+		C.roaring_bitmap_add_many(rb.cpointer, (*C.uint32_t)(ptr), C.int(len(x)))
+	}
 
-}
-
-// AddSlice adds all integers in a slice to the bitmap
-func (rb *Bitmap) AddSlice(x []uint32) {
-	ptr := unsafe.Pointer(&x[0])
-	C.roaring_bitmap_add_many(rb.cpointer, (*C.uint32_t)(ptr), C.int(len(x)))
 }
 
 // RunOptimize the compression of the bitmap (call this after populating a new bitmap), return true if the bitmap was modified
