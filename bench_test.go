@@ -12,9 +12,9 @@ var random []uint32
 
 func init() {
 	var i uint32
-	for i = 0; i < 500000; i++ {
+	for i = 0; i < 50000; i++ {
 		ordered = append(ordered, i)
-		random = append(random, uint32(rand.Int31n(1e6)))
+		random = append(random, uint32(rand.Int31n(1e6)/200))
 	}
 }
 
