@@ -42,52 +42,43 @@ Here is a simplified but complete example:
 package main
 
 import (
-    "fmt"
-    "github.com/RoaringBitmap/gocroaring"
-    "bytes"
+	"fmt"
+
+	"github.com/RoaringBitmap/gocroaring"
 )
 
-
 func main() {
-    // example inspired by https://github.com/fzandona/goroar
-    fmt.Println("==roaring==")
-    rb1 := gocroaring.NewBitmap()
-    rb1.Add(1)
-    rb1.Add(2)
-    rb1.Add(3)
-    rb1.Add(4)
-    rb1.Add(5)
-    rb1.Add(100)
-    rb1.Add(1000)
-    rb1.RunOptimize() // improves compression
-    rb2 := gocroaring.NewBitmap()
-    rb2.Add(3)
-    rb2.Add(4)
-    rb2.Add(1000)
-    rb2.RunOptimize() // improves compression
-    rb3 := gocroaring.NewBitmap()
-    fmt.Println("Cardinality: ", rb1.GetCardinality())
-    fmt.Println("Contains 3? ", rb1.Contains(3))
-    rb1.And(rb2)
-    // prints {3,4,1000}
-    fmt.Println(rb1)
-    rb3.Add(1)
-    rb3.Add(5)
-    rb3.Or(rb1)
+	// example inspired by https://github.com/fzandona/goroar
+	fmt.Println("==roaring==")
+	rb1 := gocroaring.NewBitmap(1, 2, 3, 4, 5, 100, 1000)
+	rb1.RunOptimize() // improves compression
+	fmt.Println("Cardinality: ", rb1.GetCardinality())
+	fmt.Println("Contains 3? ", rb1.Contains(3))
 
-    fmt.Println(rb3.ToArray())
-    fmt.Println(rb3)
+	rb2 := gocroaring.NewBitmap()
+	rb2.Add(3, 4, 1000)
+	rb2.RunOptimize() // improves compression
 
-    rb4 := gocroaring.FastOr(rb1,rb2,rb3) // optimized way to compute unions between many bitmaps
-    fmt.Println(rb4)
+	rb1.And(rb2)
+	// prints {3,4,1000}
+	fmt.Println(rb1)
 
-    // next we include an example of serialization
-    buf := make([]byte, rb1.GetSerializedSizeInBytes())
-    rb1.Write(buf) // we omit error handling
-    newrb,_ := gocroaring.Read(buf)
-    if rb1.Equals(newrb) {
-      fmt.Println("I wrote the content to a byte stream and read it back.")
-    }
+	rb3 := gocroaring.NewBitmap(1, 5)
+	rb3.Or(rb1)
+
+	fmt.Println(rb3.ToArray())
+	fmt.Println(rb3)
+
+	rb4 := gocroaring.FastOr(rb1, rb2, rb3) // optimized way to compute unions between many bitmaps
+	fmt.Println(rb4)
+
+	// next we include an example of serialization
+	buf := make([]byte, rb1.GetSerializedSizeInBytes())
+	rb1.Write(buf) // we omit error handling
+	newrb, _ := gocroaring.Read(buf)
+	if rb1.Equals(newrb) {
+		fmt.Println("I wrote the content to a byte stream and read it back.")
+	}
 }
 ```
 
