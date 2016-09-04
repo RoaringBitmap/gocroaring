@@ -6,7 +6,7 @@ import (
 )
 
 func TestSimpleCard(t *testing.T) {
-	bitmap := NewBitmap()
+	bitmap := New()
 	for i := 100; i < 1000; i++ {
 		bitmap.Add(uint32(i))
 	}
@@ -23,7 +23,7 @@ func TestSimpleCard(t *testing.T) {
 
 func TestNewWithVals(t *testing.T) {
 	vals := []uint32{1, 2, 3, 6, 7, 8, 20, 44444}
-	rb := NewBitmap(vals...)
+	rb := New(vals...)
 	for _, v := range vals {
 		if !rb.Contains(v) {
 			t.Errorf("expected %d from initialized values\n", v)
@@ -32,7 +32,7 @@ func TestNewWithVals(t *testing.T) {
 }
 
 func TestAddMany(t *testing.T) {
-	rb1 := NewBitmap()
+	rb1 := New()
 	sl := []uint32{1, 2, 3, 6, 7, 8, 20, 44444}
 	rb1.Add(sl...)
 
@@ -50,7 +50,7 @@ func TestAddMany(t *testing.T) {
 }
 
 func TestFancier(t *testing.T) {
-	rb1 := NewBitmap()
+	rb1 := New()
 	rb1.Add(1)
 	rb1.Add(2)
 	rb1.Add(3)
@@ -59,12 +59,12 @@ func TestFancier(t *testing.T) {
 	rb1.Add(100)
 	rb1.Add(1000)
 	rb1.RunOptimize()
-	rb2 := NewBitmap()
+	rb2 := New()
 	rb2.Add(3)
 	rb2.Add(4)
 	rb2.Add(1000)
 	rb2.RunOptimize()
-	rb3 := NewBitmap()
+	rb3 := New()
 	fmt.Println("Cardinality: ", rb1.GetCardinality())
 	if rb1.GetCardinality() != 7 {
 		t.Error("Bad card")
@@ -88,5 +88,29 @@ func TestFancier(t *testing.T) {
 		fmt.Println("I wrote the content to a byte stream and read it back.")
 	} else {
 		t.Error("Bad read")
+	}
+}
+
+func TestStats(t *testing.T) {
+
+	rb := New()
+	rb.Add(1, 2, 3, 4, 6, 7)
+	rb.Add(999991, 999992, 999993, 999994, 999996, 999997)
+
+	stats := rb.Stats()
+	if stats["cardinality"] != rb.GetCardinality() {
+		t.Errorf("cardinality: expected %d got %d\n", rb.GetCardinality(), stats["cardinality"])
+	}
+
+	if stats["n_containers"] != 2 {
+		t.Errorf("n_containers: expected %d got %d\n", 2, stats["n_containers"], stats)
+	}
+	if stats["n_array_containers"] != 2 {
+		t.Errorf("n_array_containers: expected %d got %d\n", 2, stats["n_array_containers"], stats)
+	}
+	for _, c := range []string{"n_run_containers", "n_bitmap_containers"} {
+		if stats[c] != 0 {
+			t.Errorf("%s: expected 0 got %d\n", 2, c, stats[c])
+		}
 	}
 }

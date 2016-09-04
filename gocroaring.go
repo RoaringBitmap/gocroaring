@@ -41,8 +41,8 @@ type Bitmap struct {
 	cpointer *C.struct_roaring_bitmap_s
 }
 
-// NewBitmap creates a new Bitmap with any number of initial values.
-func NewBitmap(x ...uint32) *Bitmap {
+// New creates a new Bitmap with any number of initial values.
+func New(x ...uint32) *Bitmap {
 	var answer *Bitmap
 	if len(x) > 0 {
 		ptr := unsafe.Pointer(&x[0])
@@ -243,4 +243,25 @@ func Read(b []byte) (*Bitmap, error) {
 	}
 	runtime.SetFinalizer(answer, free)
 	return answer, nil
+}
+
+// Stats returns some statistics about the roaring bitmap.
+func (rb *Bitmap) Stats() map[string]uint64 {
+	var stat C.roaring_statistics_t
+	C.roaring_bitmap_statistics(rb.cpointer, &stat)
+	return map[string]uint64{
+		"cardinality":         uint64(stat.cardinality),
+		"n_containers":        uint64(stat.n_containers),
+		"n_array_containers":  uint64(stat.n_array_containers),
+		"n_run_containers":    uint64(stat.n_run_containers),
+		"n_bitset_containers": uint64(stat.n_bitset_containers),
+
+		"n_bytes_array_containers":  uint64(stat.n_bytes_array_containers),
+		"n_bytes_run_containers":    uint64(stat.n_bytes_run_containers),
+		"n_bytes_bitset_containers": uint64(stat.n_bytes_bitset_containers),
+
+		"n_values_array_containers":  uint64(stat.n_values_array_containers),
+		"n_values_run_containers":    uint64(stat.n_values_run_containers),
+		"n_values_bitset_containers": uint64(stat.n_values_bitset_containers),
+	}
 }
