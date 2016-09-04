@@ -90,3 +90,27 @@ func TestFancier(t *testing.T) {
 		t.Error("Bad read")
 	}
 }
+
+func TestStats(t *testing.T) {
+
+	rb := NewBitmap()
+	rb.Add(1, 2, 3, 4, 6, 7)
+	rb.Add(999991, 999992, 999993, 999994, 999996, 999997)
+
+	stats := rb.Stats()
+	if stats["cardinality"] != rb.GetCardinality() {
+		t.Errorf("cardinality: expected %d got %d\n", rb.GetCardinality(), stats["cardinality"])
+	}
+
+	if stats["n_containers"] != 2 {
+		t.Errorf("n_containers: expected %d got %d\n", 2, stats["n_containers"], stats)
+	}
+	if stats["n_array_containers"] != 2 {
+		t.Errorf("n_array_containers: expected %d got %d\n", 2, stats["n_array_containers"], stats)
+	}
+	for _, c := range []string{"n_run_containers", "n_bitmap_containers"} {
+		if stats[c] != 0 {
+			t.Errorf("%s: expected 0 got %d\n", 2, c, stats[c])
+		}
+	}
+}

@@ -79,6 +79,8 @@ func main() {
 	if rb1.Equals(newrb) {
 		fmt.Println("I wrote the content to a byte stream and read it back.")
 	}
+
+	fmt.Println(rb1.Stats()) // show the cardinality and the numbers of each type of container used.
 }
 ```
 
