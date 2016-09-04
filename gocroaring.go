@@ -104,12 +104,12 @@ func (rb *Bitmap) Remove(x uint32) {
 	C.roaring_bitmap_remove(rb.cpointer, C.uint32_t(x))
 }
 
-// GetCardinality returns the number of integers contained in the bitmap
-func (rb *Bitmap) GetCardinality() uint64 {
+// Cardinality returns the number of integers contained in the bitmap
+func (rb *Bitmap) Cardinality() uint64 {
 	return uint64(C.roaring_bitmap_get_cardinality(rb.cpointer))
 }
 
-// IsEmpty returns true if the Bitmap is empty (it is faster than doing (GetCardinality() == 0))
+// IsEmpty returns true if the Bitmap is empty (it is faster than doing (Cardinality() == 0))
 func (rb *Bitmap) IsEmpty() bool {
 	return bool(C.roaring_bitmap_is_empty(rb.cpointer))
 }
@@ -190,14 +190,14 @@ func Flip(bm *Bitmap, rangeStart, rangeEnd uint64) *Bitmap {
 	return b
 }
 
-// GetSerializedSizeInBytes computes the serialized size in bytes  the Bitmap.
-func (rb *Bitmap) GetSerializedSizeInBytes() int {
+// SerializedSizeInBytes computes the serialized size in bytes  the Bitmap.
+func (rb *Bitmap) SerializedSizeInBytes() int {
 	return int(C.roaring_bitmap_portable_size_in_bytes(rb.cpointer))
 }
 
 // Write writes a serialized version of this bitmap to stream (you should have enough space)
 func (rb *Bitmap) Write(b []byte) error {
-	if len(b) < rb.GetSerializedSizeInBytes() {
+	if len(b) < rb.SerializedSizeInBytes() {
 		return errors.New("not enough space")
 	}
 	bchar := (*C.char)(unsafe.Pointer(&b[0]))
@@ -207,7 +207,7 @@ func (rb *Bitmap) Write(b []byte) error {
 
 // ToArray creates a new slice containing all of the integers stored in the Bitmap in sorted order
 func (rb *Bitmap) ToArray() []uint32 {
-	array := make([]uint32, rb.GetCardinality())
+	array := make([]uint32, rb.Cardinality())
 	C.roaring_bitmap_to_uint32_array(rb.cpointer, (*C.uint32_t)(unsafe.Pointer(&array[0])))
 	return array
 }

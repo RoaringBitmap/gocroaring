@@ -52,7 +52,7 @@ func main() {
 	fmt.Println("==roaring==")
 	rb1 := gocroaring.New(1, 2, 3, 4, 5, 100, 1000)
 	rb1.RunOptimize() // improves compression
-	fmt.Println("Cardinality: ", rb1.GetCardinality())
+	fmt.Println("Cardinality: ", rb1.Cardinality())
 	fmt.Println("Contains 3? ", rb1.Contains(3))
 
 	rb2 := gocroaring.New()
@@ -73,7 +73,7 @@ func main() {
 	fmt.Println(rb4)
 
 	// next we include an example of serialization
-	buf := make([]byte, rb1.GetSerializedSizeInBytes())
+	buf := make([]byte, rb1.SerializedSizeInBytes())
 	rb1.Write(buf) // we omit error handling
 	newrb, _ := gocroaring.Read(buf)
 	if rb1.Equals(newrb) {
