@@ -41,9 +41,15 @@ type Bitmap struct {
 	cpointer *C.struct_roaring_bitmap_s
 }
 
-// NewBitmap creates a new empty Bitmap
-func NewBitmap() *Bitmap {
-	answer := &Bitmap{C.roaring_bitmap_create()}
+// NewBitmap creates a new Bitmap with any number of initial values.
+func NewBitmap(x ...uint32) *Bitmap {
+	var answer *Bitmap
+	if len(x) > 0 {
+		ptr := unsafe.Pointer(&x[0])
+		answer = &Bitmap{C.roaring_bitmap_of_ptr(C.size_t(len(x)), (*C.uint32_t)(ptr))}
+	} else {
+		answer = &Bitmap{C.roaring_bitmap_create()}
+	}
 	runtime.SetFinalizer(answer, free)
 	return answer
 }

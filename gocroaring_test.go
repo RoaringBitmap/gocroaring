@@ -21,6 +21,16 @@ func TestSimpleCard(t *testing.T) {
 	}
 }
 
+func TestNewWithVals(t *testing.T) {
+	vals := []uint32{1, 2, 3, 6, 7, 8, 20, 44444}
+	rb := NewBitmap(vals...)
+	for _, v := range vals {
+		if !rb.Contains(v) {
+			t.Errorf("expected %d from initialized values\n", v)
+		}
+	}
+}
+
 func TestAddMany(t *testing.T) {
 	rb1 := NewBitmap()
 	sl := []uint32{1, 2, 3, 6, 7, 8, 20, 44444}

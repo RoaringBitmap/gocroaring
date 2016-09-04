@@ -34,8 +34,19 @@ func benchmarkAddMany(b *testing.B, sl []uint32) {
 	}
 }
 
+func benchmarkNewFromPtr(b *testing.B, sl []uint32) {
+	for n := 0; n < b.N; n++ {
+		rb := gocroaring.NewBitmap(sl...)
+		_ = rb
+	}
+
+}
+
 func BenchmarkAddRandom(b *testing.B)  { benchmarkAdd(b, random) }
 func BenchmarkAddOrdered(b *testing.B) { benchmarkAdd(b, ordered) }
 
 func BenchmarkAddRandomArity(b *testing.B)  { benchmarkAddMany(b, random) }
 func BenchmarkAddOrderedArity(b *testing.B) { benchmarkAddMany(b, ordered) }
+
+func BenchmarkRandomNewFromPtr(b *testing.B)  { benchmarkNewFromPtr(b, random) }
+func BenchmarkOrderedNewFromPtr(b *testing.B) { benchmarkNewFromPtr(b, ordered) }
