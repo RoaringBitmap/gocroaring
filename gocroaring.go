@@ -41,8 +41,8 @@ type Bitmap struct {
 	cpointer *C.struct_roaring_bitmap_s
 }
 
-// NewBitmap creates a new Bitmap with any number of initial values.
-func NewBitmap(x ...uint32) *Bitmap {
+// New creates a new Bitmap with any number of initial values.
+func New(x ...uint32) *Bitmap {
 	var answer *Bitmap
 	if len(x) > 0 {
 		ptr := unsafe.Pointer(&x[0])

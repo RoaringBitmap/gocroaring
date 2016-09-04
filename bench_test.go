@@ -20,7 +20,7 @@ func init() {
 
 func benchmarkAdd(b *testing.B, sl []uint32) {
 	for n := 0; n < b.N; n++ {
-		rb1 := gocroaring.NewBitmap()
+		rb1 := gocroaring.New()
 		for _, i := range sl {
 			rb1.Add(i)
 		}
@@ -29,14 +29,14 @@ func benchmarkAdd(b *testing.B, sl []uint32) {
 
 func benchmarkAddMany(b *testing.B, sl []uint32) {
 	for n := 0; n < b.N; n++ {
-		rb1 := gocroaring.NewBitmap()
+		rb1 := gocroaring.New()
 		rb1.Add(sl...)
 	}
 }
 
 func benchmarkNewFromPtr(b *testing.B, sl []uint32) {
 	for n := 0; n < b.N; n++ {
-		rb := gocroaring.NewBitmap(sl...)
+		rb := gocroaring.New(sl...)
 		_ = rb
 	}
 

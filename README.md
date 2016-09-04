@@ -50,12 +50,12 @@ import (
 func main() {
 	// example inspired by https://github.com/fzandona/goroar
 	fmt.Println("==roaring==")
-	rb1 := gocroaring.NewBitmap(1, 2, 3, 4, 5, 100, 1000)
+	rb1 := gocroaring.New(1, 2, 3, 4, 5, 100, 1000)
 	rb1.RunOptimize() // improves compression
 	fmt.Println("Cardinality: ", rb1.GetCardinality())
 	fmt.Println("Contains 3? ", rb1.Contains(3))
 
-	rb2 := gocroaring.NewBitmap()
+	rb2 := gocroaring.New()
 	rb2.Add(3, 4, 1000)
 	rb2.RunOptimize() // improves compression
 
@@ -63,7 +63,7 @@ func main() {
 	// prints {3,4,1000}
 	fmt.Println(rb1)
 
-	rb3 := gocroaring.NewBitmap(1, 5)
+	rb3 := gocroaring.New(1, 5)
 	rb3.Or(rb1)
 
 	fmt.Println(rb3.ToArray())
