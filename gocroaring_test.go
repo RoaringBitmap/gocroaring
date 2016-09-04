@@ -10,7 +10,7 @@ func TestSimpleCard(t *testing.T) {
 	for i := 100; i < 1000; i++ {
 		bitmap.Add(uint32(i))
 	}
-	c := bitmap.GetCardinality()
+	c := bitmap.Cardinality()
 	fmt.Println("cardinality: ", c)
 	if c != 900 {
 		t.Error("Expected ", 900, ", got ", c)
@@ -36,8 +36,8 @@ func TestAddMany(t *testing.T) {
 	sl := []uint32{1, 2, 3, 6, 7, 8, 20, 44444}
 	rb1.Add(sl...)
 
-	if int(rb1.GetCardinality()) != len(sl) {
-		t.Errorf("cardinality: expected %d, got %d", rb1.GetCardinality(), len(sl))
+	if int(rb1.Cardinality()) != len(sl) {
+		t.Errorf("cardinality: expected %d, got %d", rb1.Cardinality(), len(sl))
 	}
 	if rb1.Contains(5) {
 		t.Error("didn't expect to contain 5")
@@ -65,8 +65,8 @@ func TestFancier(t *testing.T) {
 	rb2.Add(1000)
 	rb2.RunOptimize()
 	rb3 := New()
-	fmt.Println("Cardinality: ", rb1.GetCardinality())
-	if rb1.GetCardinality() != 7 {
+	fmt.Println("Cardinality: ", rb1.Cardinality())
+	if rb1.Cardinality() != 7 {
 		t.Error("Bad card")
 	}
 	if !rb1.Contains(3) {
@@ -81,7 +81,7 @@ func TestFancier(t *testing.T) {
 	rb4 := FastOr(rb1, rb2, rb3)
 	fmt.Println(rb4)
 	// next we include an example of serialization
-	buf := make([]byte, rb1.GetSerializedSizeInBytes())
+	buf := make([]byte, rb1.SerializedSizeInBytes())
 	rb1.Write(buf) // we omit error handling
 	newrb, _ := Read(buf)
 	if rb1.Equals(newrb) {
@@ -98,8 +98,8 @@ func TestStats(t *testing.T) {
 	rb.Add(999991, 999992, 999993, 999994, 999996, 999997)
 
 	stats := rb.Stats()
-	if stats["cardinality"] != rb.GetCardinality() {
-		t.Errorf("cardinality: expected %d got %d\n", rb.GetCardinality(), stats["cardinality"])
+	if stats["cardinality"] != rb.Cardinality() {
+		t.Errorf("cardinality: expected %d got %d\n", rb.Cardinality(), stats["cardinality"])
 	}
 
 	if stats["n_containers"] != 2 {
