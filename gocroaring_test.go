@@ -5,6 +5,22 @@ import (
 	"testing"
 )
 
+// go test -run MemoryUsage
+func TestMemoryUsage(t *testing.T) {
+  bitmap := New()
+  for i:= 0; i < 1000000; i++ {
+    bitmap.Add(uint32(i)*10)
+  }
+  sb := bitmap.SerializedSizeInBytes()
+  memory_alloc := 8*1024*1024*1024
+  howmany := (memory_alloc + sb - 1)/ sb
+  fmt.Println("size in MB of one bitmap ", sb/(1024*1024), "; number of copies = ", howmany, "; total alloc: ", howmany * sb / (1024*1024*1024), "GB")
+  for i:= 0; i < howmany; i++ {
+    y := bitmap.Clone()
+    _ = y
+  }
+}
+
 func TestSimpleCard(t *testing.T) {
 	bitmap := New()
 	for i := 100; i < 1000; i++ {
