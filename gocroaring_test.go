@@ -12,8 +12,8 @@ func TestMemoryUsage(t *testing.T) {
 		bitmap.Add(uint32(i) * 10)
 	}
 	sb := bitmap.SerializedSizeInBytes()
-	memory_alloc := 8 * 1024 * 1024 * 1024
-	howmany := (memory_alloc + sb - 1) / sb
+	memoryAlloc := 8 *  1024 * 1024
+	howmany := (memoryAlloc + sb - 1) / sb
 	fmt.Println("size in MB of one bitmap ", sb/(1024*1024), "; number of copies = ", howmany, "; total alloc: ", howmany*sb/(1024*1024*1024), "GB")
 	for i := 0; i < howmany; i++ {
 		y := bitmap.Clone()
@@ -119,14 +119,14 @@ func TestStats(t *testing.T) {
 	}
 
 	if stats["n_containers"] != 2 {
-		t.Errorf("n_containers: expected %d got %d\n", 2, stats["n_containers"], stats)
+		t.Errorf("n_containers: expected %d got %d\n", 2, stats["n_containers"])
 	}
 	if stats["n_array_containers"] != 2 {
-		t.Errorf("n_array_containers: expected %d got %d\n", 2, stats["n_array_containers"], stats)
+		t.Errorf("n_array_containers: expected %d got %d\n", 2, stats["n_array_containers"])
 	}
 	for _, c := range []string{"n_run_containers", "n_bitmap_containers"} {
 		if stats[c] != 0 {
-			t.Errorf("%s: expected 0 got %d\n", 2, c, stats[c])
+			t.Errorf("%s: expected 0 got %d\n", c, stats[c])
 		}
 	}
 }
