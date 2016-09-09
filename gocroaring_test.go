@@ -5,6 +5,10 @@ import (
 	"testing"
 )
 
+func TestDisplayVersion(t *testing.T) {
+  fmt.Printf("CRoaring %v.%v.%v\n", CRoaringMajor, CRoaringMinor, CRoaringRevision)
+}
+
 // go test -run MemoryUsage
 func TestMemoryUsage(t *testing.T) {
 	bitmap := New()
@@ -14,7 +18,7 @@ func TestMemoryUsage(t *testing.T) {
 	sb := bitmap.SerializedSizeInBytes()
 	memoryAlloc := 8 *  1024 * 1024
 	howmany := (memoryAlloc + sb - 1) / sb
-	fmt.Println("size in MB of one bitmap ", sb/(1024*1024), "; number of copies = ", howmany, "; total alloc: ", howmany*sb/(1024*1024*1024), "GB")
+	fmt.Println("size in kB of one bitmap ", sb/(1024), "; number of copies = ", howmany, "; total alloc: ", howmany*sb/(1024), "kB")
 	for i := 0; i < howmany; i++ {
 		y := bitmap.Clone()
 		_ = y

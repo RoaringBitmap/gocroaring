@@ -7,20 +7,6 @@ package gocroaring
 #cgo CFLAGS: -march=native -O3  -Wa,-q -std=c99
 #include "roaring.h"
 
-// mitigate cgo call overhead by adding many values at once.
-void roaring_bitmap_add_many(roaring_bitmap_t *r, const uint32_t *vals, int n){
-	// somewhat emprically found that about 1K is the break-even.
-	if(n < 1000) {
-		for(int i=0;i<n;i++){
-			roaring_bitmap_add(r, vals[i]);
-		}
-		return;
-	}
-	roaring_bitmap_t *ro = roaring_bitmap_of_ptr((size_t)n, vals);
-	roaring_bitmap_or_inplace(r, ro);
-	roaring_bitmap_free(ro);
-}
-
 */
 import "C"
 import (
@@ -32,6 +18,10 @@ import (
 )
 
 import "unsafe"
+
+const CRoaringMajor = C.ROARING_VERSION_MAJOR
+const CRoaringMinor = C.ROARING_VERSION_MINOR
+const CRoaringRevision = C.ROARING_VERSION_REVISION
 
 func free(a *Bitmap) {
 	C.roaring_bitmap_free(a.cpointer)
@@ -67,7 +57,7 @@ func (rb *Bitmap) Add(x ...uint32) {
 		C.roaring_bitmap_add(rb.cpointer, C.uint32_t(x[0]))
 	} else {
 		ptr := unsafe.Pointer(&x[0])
-		C.roaring_bitmap_add_many(rb.cpointer, (*C.uint32_t)(ptr), C.int(len(x)))
+		C.roaring_bitmap_add_many(rb.cpointer, C.size_t(len(x)), (*C.uint32_t)(ptr))
 	}
 
 }
