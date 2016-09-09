@@ -18,6 +18,7 @@ void roaring_bitmap_add_many(roaring_bitmap_t *r, const uint32_t *vals, int n){
 	}
 	roaring_bitmap_t *ro = roaring_bitmap_of_ptr((size_t)n, vals);
 	roaring_bitmap_or_inplace(r, ro);
+	roaring_bitmap_free(ro);
 }
 
 */
