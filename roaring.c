@@ -1,4 +1,4 @@
-/* auto-generated on Fri  9 Sep 2016 19:07:34 EDT. Do not edit! */
+/* auto-generated on Fri  9 Sep 2016 22:10:14 EDT. Do not edit! */
 #line 1 "roaring.c"
 #include "roaring.h"
 /* begin file /Users/lemire/CVS/github/CRoaring/src/array_util.c */
