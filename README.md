@@ -1,4 +1,4 @@
-# gocroaring[![GoDoc](https://godoc.org/github.com/RoaringBitmap/gocroaring?status.svg)](https://godoc.org/github.com/RoaringBitmap/gocroaring)
+# gocroaring  [![Build Status](https://travis-ci.org/RoaringBitmap/gocroaring.png)](https://travis-ci.org/RoaringBitmap/gocroaring) [![Coverage Status] [![GoDoc](https://godoc.org/github.com/RoaringBitmap/gocroaring?status.svg)](https://godoc.org/github.com/RoaringBitmap/gocroaring)
 Go wrapper for CRoaring (a C/C++ implementation at https://github.com/RoaringBitmap/CRoaring)
 
 Roaring is  used by Apache Spark (https://spark.apache.org/), Apache Kylin (http://kylin.io),
