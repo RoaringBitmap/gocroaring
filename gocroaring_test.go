@@ -111,6 +111,14 @@ func TestFancier(t *testing.T) {
 	}
 }
 
+func TestString(t *testing.T) {
+  ans := New(1,2,3).String()
+  fmt.Println(ans)
+	if ans != "{1,2,3}" {
+		t.Errorf("bad string ")
+	}
+}
+
 func TestStats(t *testing.T) {
 
 	rb := New()

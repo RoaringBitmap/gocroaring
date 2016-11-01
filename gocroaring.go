@@ -12,8 +12,7 @@ import "C"
 import (
 	"bytes"
 	"errors"
-	"io"
-	"os"
+	"strconv"
 	"runtime"
 )
 
@@ -205,24 +204,24 @@ func (rb *Bitmap) ToArray() []uint32 {
 
 // String creates a string representation of the Bitmap
 func (rb *Bitmap) String() string {
-	old := os.Stdout // keep backup of the real stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-	C.roaring_bitmap_printf(rb.cpointer)
-	C.fflush(C.stdout)
-	outC := make(chan string)
-	// copy the output in a separate goroutine so printing can't block indefinitely
-	go func() {
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		outC <- buf.String()
-	}()
-
-	// back to normal state
-	w.Close()
-	os.Stdout = old // restoring the real stdout
-	out := <-outC
-	return out
+  arr := rb.ToArray() // todo: replace with an iterator
+  var buffer bytes.Buffer
+	start := []byte("{")
+	buffer.Write(start)
+  l := len(arr)
+  for counter,i := range arr {
+		// to avoid exhausting the memory
+		if counter > 0x40000 {
+			buffer.WriteString("...")
+			break
+		}
+		buffer.WriteString(strconv.FormatInt(int64(i), 10))
+		if counter + 1 < l { // there is more
+			buffer.WriteString(",")
+		}
+	}
+	buffer.WriteString("}")
+	return buffer.String()
 }
 
 // Read reads a serialized version of the bitmap (you need to call Free on it once you are done)
