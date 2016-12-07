@@ -88,6 +88,11 @@ func main() {
 
 Current documentation is available at http://godoc.org/github.com/RoaringBitmap/gocroaring
 
+
+### Mailing list/discussion group
+
+https://groups.google.com/forum/#!forum/roaring-bitmaps
+
 ### Compatibility with Java RoaringBitmap library
 
 You can read bitmaps in Go, Java, C, C++ that have been serialized in Java, Java, C, C++.
