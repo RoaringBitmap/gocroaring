@@ -12,11 +12,10 @@ import "C"
 import (
 	"bytes"
 	"errors"
-	"strconv"
 	"runtime"
+	"strconv"
+  "unsafe"
 )
-
-import "unsafe"
 
 const CRoaringMajor = C.ROARING_VERSION_MAJOR
 const CRoaringMinor = C.ROARING_VERSION_MINOR
@@ -185,6 +184,53 @@ func (rb *Bitmap) SerializedSizeInBytes() int {
 	return int(C.roaring_bitmap_portable_size_in_bytes(rb.cpointer))
 }
 
+// IntIterable allows you to iterate over the values in a Bitmap
+type IntIterable interface {
+	HasNext() bool
+	Next() uint32
+}
+
+type intIterator struct {
+	pointertonext *C.roaring_uint32_iterator_t
+	current       uint32
+	has_next      bool
+}
+
+// Iterator creates a new IntIterable to iterate over the integers contained in the bitmap, in sorted order
+func (rb *Bitmap) Iterator() IntIterable {
+	return newIntIterator(rb)
+}
+
+// HasNext returns true if there are more integers to iterate over
+func (ii *intIterator) HasNext() bool {
+	return ii.has_next
+}
+
+// Next returns the next integer
+func (ii *intIterator) Next() uint32 {
+	answer := ii.current
+	ii.has_next = bool(ii.pointertonext.has_value)
+	ii.current = uint32(ii.pointertonext.current_value)
+	C.roaring_advance_uint32_iterator(ii.pointertonext)
+	return answer
+}
+
+func freeIntIterator(a *intIterator) {
+	C.roaring_free_uint32_iterator(a.pointertonext)
+}
+
+func newIntIterator(a *Bitmap) *intIterator {
+	p := new(intIterator)
+	p.pointertonext = C.roaring_create_iterator(a.cpointer)
+	p.has_next = bool(p.pointertonext.has_value)
+	p.current = uint32(p.pointertonext.current_value)
+	if p.has_next {
+		C.roaring_advance_uint32_iterator(p.pointertonext)
+	}
+	runtime.SetFinalizer(p, freeIntIterator)
+	return p
+}
+
 // Write writes a serialized version of this bitmap to stream (you should have enough space)
 func (rb *Bitmap) Write(b []byte) error {
 	if len(b) < rb.SerializedSizeInBytes() {
@@ -204,19 +250,19 @@ func (rb *Bitmap) ToArray() []uint32 {
 
 // String creates a string representation of the Bitmap
 func (rb *Bitmap) String() string {
-  arr := rb.ToArray() // todo: replace with an iterator
-  var buffer bytes.Buffer
+	arr := rb.ToArray() // todo: replace with an iterator
+	var buffer bytes.Buffer
 	start := []byte("{")
 	buffer.Write(start)
-  l := len(arr)
-  for counter,i := range arr {
+	l := len(arr)
+	for counter, i := range arr {
 		// to avoid exhausting the memory
 		if counter > 0x40000 {
 			buffer.WriteString("...")
 			break
 		}
 		buffer.WriteString(strconv.FormatInt(int64(i), 10))
-		if counter + 1 < l { // there is more
+		if counter+1 < l { // there is more
 			buffer.WriteString(",")
 		}
 	}

@@ -66,6 +66,13 @@ func main() {
 	rb3 := gocroaring.New(1, 5)
 	rb3.Or(rb1)
 
+        // prints 1, 3, 4, 5, 1000
+        i := rb3.Iterator()
+        for i.HasNext() {
+          fmt.Println(i.Next())
+        }
+        fmt.Println()
+
 	fmt.Println(rb3.ToArray())
 	fmt.Println(rb3)
 

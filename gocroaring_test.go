@@ -6,7 +6,7 @@ import (
 )
 
 func TestDisplayVersion(t *testing.T) {
-  fmt.Printf("CRoaring %v.%v.%v\n", CRoaringMajor, CRoaringMinor, CRoaringRevision)
+	fmt.Printf("CRoaring %v.%v.%v\n", CRoaringMajor, CRoaringMinor, CRoaringRevision)
 }
 
 // go test -run MemoryUsage
@@ -16,7 +16,7 @@ func TestMemoryUsage(t *testing.T) {
 		bitmap.Add(uint32(i) * 10)
 	}
 	sb := bitmap.SerializedSizeInBytes()
-	memoryAlloc := 8 *  1024 * 1024
+	memoryAlloc := 8 * 1024 * 1024
 	howmany := (memoryAlloc + sb - 1) / sb
 	fmt.Println("size in kB of one bitmap ", sb/(1024), "; number of copies = ", howmany, "; total alloc: ", howmany*sb/(1024), "kB")
 	for i := 0; i < howmany; i++ {
@@ -96,6 +96,12 @@ func TestFancier(t *testing.T) {
 	fmt.Println(rb1)
 	rb3.Add(5)
 	rb3.Or(rb1)
+  // prints 3, 4, 5, 1000
+  i := rb3.Iterator()
+  for i.HasNext() {
+  fmt.Println(i.Next())
+  }
+  fmt.Println()
 	fmt.Println(rb3.ToArray())
 	fmt.Println(rb3)
 	rb4 := FastOr(rb1, rb2, rb3)
@@ -112,8 +118,8 @@ func TestFancier(t *testing.T) {
 }
 
 func TestString(t *testing.T) {
-  ans := New(1,2,3).String()
-  fmt.Println(ans)
+	ans := New(1, 2, 3).String()
+	fmt.Println(ans)
 	if ans != "{1,2,3}" {
 		t.Errorf("bad string ")
 	}
