@@ -14,7 +14,7 @@ import (
 	"errors"
 	"runtime"
 	"strconv"
-  "unsafe"
+	"unsafe"
 )
 
 const CRoaringMajor = C.ROARING_VERSION_MAJOR
@@ -96,6 +96,32 @@ func (rb *Bitmap) Remove(x uint32) {
 // Cardinality returns the number of integers contained in the bitmap
 func (rb *Bitmap) Cardinality() uint64 {
 	return uint64(C.roaring_bitmap_get_cardinality(rb.cpointer))
+}
+
+// Maximum returns the largest of the integers contained in the bitmap assuming that it is not empty
+func (rb *Bitmap) Maximum() uint32 {
+	return uint32(C.roaring_bitmap_maximum(rb.cpointer))
+}
+
+// Minimum returns the smallest of the integers contained in the bitmap assuming that it is not empty
+func (rb *Bitmap) Minimum() uint32 {
+	return uint32(C.roaring_bitmap_minimum(rb.cpointer))
+}
+
+// Rank returns the number of values smaller or equal to x
+func (rb *Bitmap) Rank(x uint32) uint64 {
+	return uint64(C.roaring_bitmap_rank(rb.cpointer, C.uint32_t(x)))
+}
+
+// Select returns the element having the designated rank, if it exists
+func (rb *Bitmap) Select(rank uint32) (uint32, error) {
+	var element uint32 = 0
+	exists := bool(C.roaring_bitmap_select(rb.cpointer, C.uint32_t(rank), (*C.uint32_t)(unsafe.Pointer(&element))))
+	if exists {
+		return element, nil
+	} else {
+		return element, errors.New("no such element")
+	}
 }
 
 // IsEmpty returns true if the Bitmap is empty (it is faster than doing (Cardinality() == 0))

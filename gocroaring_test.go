@@ -96,12 +96,12 @@ func TestFancier(t *testing.T) {
 	fmt.Println(rb1)
 	rb3.Add(5)
 	rb3.Or(rb1)
-  // prints 3, 4, 5, 1000
-  i := rb3.Iterator()
-  for i.HasNext() {
-  fmt.Println(i.Next())
-  }
-  fmt.Println()
+	// prints 3, 4, 5, 1000
+	i := rb3.Iterator()
+	for i.HasNext() {
+		fmt.Println(i.Next())
+	}
+	fmt.Println()
 	fmt.Println(rb3.ToArray())
 	fmt.Println(rb3)
 	rb4 := FastOr(rb1, rb2, rb3)
