@@ -1,10 +1,15 @@
 # gocroaring  [![Build Status](https://travis-ci.org/RoaringBitmap/gocroaring.png)](https://travis-ci.org/RoaringBitmap/gocroaring) [![GoDoc](https://godoc.org/github.com/RoaringBitmap/gocroaring?status.svg)](https://godoc.org/github.com/RoaringBitmap/gocroaring)
 Go wrapper for CRoaring (a C/C++ implementation at https://github.com/RoaringBitmap/CRoaring)
 
-Roaring is  used by Apache Spark (https://spark.apache.org/), Apache Kylin (http://kylin.io),
-Druid.io (http://druid.io/), Whoosh (https://pypi.python.org/pypi/Whoosh/)
-and  Apache Lucene (http://lucene.apache.org/) (as well as supporting systems
-such as Solr and Elastic).
+Roaring bitmaps are used by several important systems:
+
+*   [Apache Lucene](http://lucene.apache.org/core/) and derivative systems such as Solr and [Elastic](https://www.elastic.co/),
+*   Metamarkets' [Druid](http://druid.io/),
+*   [Apache Spark](http://spark.apache.org),
+*   [Netflix Atlas](https://github.com/Netflix/atlas),
+*   [LinkedIn Pinot](https://github.com/linkedin/pinot/wiki),
+*   [Whoosh](https://pypi.python.org/pypi/Whoosh/),
+*   eBay's [Apache Kylin](http://kylin.io).
 
 The original java version can be found at https://github.com/RoaringBitmap/RoaringBitmap
 
