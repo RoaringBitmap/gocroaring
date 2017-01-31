@@ -1,4 +1,4 @@
-/* auto-generated on Thu 12 Jan 2017 16:53:12 EST. Do not edit! */
+/* auto-generated on Tue Jan 31 16:15:16 EST 2017. Do not edit! */
 #include "roaring.h"
 /* begin file src/array_util.c */
 #include <assert.h>
@@ -2931,6 +2931,14 @@ bool array_container_iterate(const array_container_t *cont, uint32_t base,
         if (!iterator(cont->array[i] + base, ptr)) return false;
     return true;
 }
+
+bool array_container_iterate64(const array_container_t *cont, uint32_t base,
+                               roaring_iterator64 iterator,
+                               uint64_t high_bits, void *ptr) {
+    for (int i = 0; i < cont->cardinality; i++)
+        if (!iterator(high_bits | (uint64_t)(cont->array[i] + base), ptr)) return false;
+    return true;
+}
 /* end file src/containers/array.c */
 /* begin file src/containers/bitset.c */
 /*
@@ -3369,6 +3377,20 @@ bool bitset_container_iterate(const bitset_container_t *cont, uint32_t base, roa
       uint64_t t = w & -w;
       int r = __builtin_ctzll(w);
       if(!iterator(r + base, ptr)) return false;
+      w ^= t;
+    }
+    base += 64;
+  }
+  return true;
+}
+
+bool bitset_container_iterate64(const bitset_container_t *cont, uint32_t base, roaring_iterator64 iterator, uint64_t high_bits, void *ptr) {
+  for (int32_t i = 0; i < BITSET_CONTAINER_SIZE_IN_WORDS; ++i ) {
+    uint64_t w = cont->array[i];
+    while (w != 0) {
+      uint64_t t = w & -w;
+      int r = __builtin_ctzll(w);
+      if(!iterator(high_bits | (uint64_t)(r + base), ptr)) return false;
       w ^= t;
     }
     base += 64;
@@ -4634,12 +4656,21 @@ void array_bitset_container_intersection(const array_container_t *src_1,
     int32_t newcard = 0;  // dst could be src_1
     const int32_t origcard = src_1->cardinality;
     for (int i = 0; i < origcard; ++i) {
-        // could probably be vectorized
         uint16_t key = src_1->array[i];
-        // next bit could be branchless
-        if (bitset_container_contains(src_2, key)) {
-            dst->array[newcard++] = key;
-        }
+        // this branchless approach is much faster...
+        dst->array[newcard] = key;
+        newcard +=  bitset_container_contains(src_2, key); 
+        /**
+         * we could do it this way instead...
+         * if (bitset_container_contains(src_2, key)) {
+         * dst->array[newcard++] = key;
+         * }
+         * but if the result is unpredictible, the processor generates
+         * many mispredicted branches.
+         * Difference can be huge (from 3 cycles when predictible all the way
+         * to 16 cycles when unpredictible.
+         * See https://github.com/lemire/Code-used-on-Daniel-Lemire-s-blog/blob/master/extra/bitset/c/arraybitsetintersection.c
+         */
     }
     dst->cardinality = newcard;
 }
@@ -6457,6 +6488,19 @@ bool run_container_iterate(const run_container_t *cont, uint32_t base,
     return true;
 }
 
+bool run_container_iterate64(const run_container_t *cont, uint32_t base,
+                             roaring_iterator64 iterator,
+                             uint64_t high_bits, void *ptr) {
+    for (int i = 0; i < cont->n_runs; ++i) {
+        uint32_t run_start = base + cont->runs[i].value;
+        uint16_t le = cont->runs[i].length;
+
+        for (int j = 0; j <= le; ++j)
+            if (!iterator(high_bits | (uint64_t)(run_start + j), ptr)) return false;
+    }
+    return true;
+}
+
 bool run_container_equals(run_container_t *container1,
                           run_container_t *container2) {
     if (container1->n_runs != container2->n_runs) {
@@ -7669,6 +7713,17 @@ bool roaring_iterate(const roaring_bitmap_t *ra, roaring_iterator iterator,
         if (!container_iterate(ra->high_low_container.containers[i], ra->high_low_container.typecodes[i],
                 ((uint32_t)ra->high_low_container.keys[i]) << 16, iterator,
                 ptr)) {
+            return false;
+        }
+    return true;
+}
+
+bool roaring_iterate64(const roaring_bitmap_t *ra, roaring_iterator64 iterator,
+                       uint64_t high_bits, void *ptr) {
+    for (int i = 0; i < ra->high_low_container.size; ++i)
+        if (!container_iterate64(ra->high_low_container.containers[i], ra->high_low_container.typecodes[i],
+                ((uint32_t)ra->high_low_container.keys[i]) << 16, iterator,
+                high_bits, ptr)) {
             return false;
         }
     return true;
