@@ -1,4 +1,4 @@
-/* auto-generated on Tue Jan 31 16:15:16 EST 2017. Do not edit! */
+/* auto-generated on Tue Feb  7 10:15:11 EST 2017. Do not edit! */
 #include "roaring.h"
 /* begin file src/array_util.c */
 #include <assert.h>
@@ -2784,9 +2784,9 @@ void array_container_printf_as_uint32_array(const array_container_t *v,
     if (v->cardinality == 0) {
         return;
     }
-    printf("%d", v->array[0] + base);
+    printf("%u", v->array[0] + base);
     for (int i = 1; i < v->cardinality; ++i) {
-        printf(",%d", v->array[i] + base);
+        printf(",%u", v->array[i] + base);
     }
 }
 
@@ -3268,10 +3268,10 @@ void bitset_container_printf(const bitset_container_t * v) {
 			uint64_t t = w & -w;
 			int r = __builtin_ctzll(w);
 			if(iamfirst) {// predicted to be false
-				printf("%d",base + r);
+				printf("%u",base + r);
 				iamfirst = false;
 			} else {
-				printf(",%d",base + r);
+				printf(",%u",base + r);
 			}
 			w ^= t;
 		}
@@ -3292,10 +3292,10 @@ void bitset_container_printf_as_uint32_array(const bitset_container_t * v, uint3
 			uint64_t t = w & -w;
 			int r = __builtin_ctzll(w);
 			if(iamfirst) {// predicted to be false
-				printf("%d", r + base);
+				printf("%u", r + base);
 				iamfirst = false;
 			} else {
-				printf(",%d",r + base);
+				printf(",%u",r + base);
 			}
 			w ^= t;
 		}
@@ -3473,7 +3473,7 @@ uint16_t bitset_container_minimum(const bitset_container_t *container) {
 }
 
 /* Returns the largest value (assumes not empty) */
-inline uint16_t bitset_container_maximum(const bitset_container_t *container) {
+uint16_t bitset_container_maximum(const bitset_container_t *container) {
   for (int32_t i = BITSET_CONTAINER_SIZE_IN_WORDS - 1; i > 0; --i ) {
     uint64_t w = container->array[i];
     if (w != 0) {
@@ -6387,13 +6387,13 @@ void run_container_printf_as_uint32_array(const run_container_t *cont,
     {
         uint32_t run_start = base + cont->runs[0].value;
         uint16_t le = cont->runs[0].length;
-        printf("%d", run_start);
-        for (uint32_t j = 1; j <= le; ++j) printf(",%d", run_start + j);
+        printf("%u", run_start);
+        for (uint32_t j = 1; j <= le; ++j) printf(",%u", run_start + j);
     }
     for (int32_t i = 1; i < cont->n_runs; ++i) {
         uint32_t run_start = base + cont->runs[i].value;
         uint16_t le = cont->runs[i].length;
-        for (uint32_t j = 0; j <= le; ++j) printf(",%d", run_start + j);
+        for (uint32_t j = 0; j <= le; ++j) printf(",%u", run_start + j);
     }
 }
 
@@ -6812,7 +6812,7 @@ void roaring_bitmap_printf_describe(const roaring_bitmap_t *ra) {
         if (ra->high_low_container.typecodes[i] ==
             SHARED_CONTAINER_TYPE_CODE) {
             printf(
-                "(shared count = %d )",
+                "(shared count = %u )",
                 ((shared_container_t *)(ra->high_low_container.containers[i]))
                     ->counter);
         }
@@ -9060,7 +9060,7 @@ bool ra_portable_deserialize(roaring_array_t *answer, const char *buf) {
     buf += sizeof(uint32_t);
     if ((cookie & 0xFFFF) != SERIAL_COOKIE &&
         cookie != SERIAL_COOKIE_NO_RUNCONTAINER) {
-        fprintf(stderr, "I failed to find one of the right cookies. Found %d\n",
+        fprintf(stderr, "I failed to find one of the right cookies. Found %u\n",
                 cookie);
         return false;
     }
@@ -9264,7 +9264,7 @@ static roaring_bitmap_t *lazy_or_from_lazy_inputs(roaring_bitmap_t *x1,
             void *c;
 
             if ((container_type_2 == BITSET_CONTAINER_TYPE_CODE) &&
-                (container_type_2 != BITSET_CONTAINER_TYPE_CODE)) {
+                (container_type_1 != BITSET_CONTAINER_TYPE_CODE)) {
                 c = container_lazy_ior(c2, container_type_2, c1,
                                        container_type_1,
                                        &container_result_type);
