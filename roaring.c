@@ -1,4 +1,4 @@
-/* auto-generated on Thu Mar 23 21:26:04 EDT 2017. Do not edit! */
+/* auto-generated on Fri Mar 24 10:26:41 EDT 2017. Do not edit! */
 #include "roaring.h"
 /* begin file src/array_util.c */
 #include <assert.h>
@@ -712,8 +712,35 @@ int32_t intersect_skewed_uint16_cardinality(const uint16_t *small,
     return (int32_t)pos;
 }
 
+bool intersect_skewed_uint16_nonempty(const uint16_t *small, size_t size_s,
+                                const uint16_t *large, size_t size_l) {
+    size_t idx_l = 0, idx_s = 0;
+
+    if (0 == size_s) {
+        return false;
+    }
+
+    uint16_t val_l = large[idx_l], val_s = small[idx_s];
+
+    while (true) {
+        if (val_l < val_s) {
+            idx_l = advanceUntil(large, (int32_t)idx_l, (int32_t)size_l, val_s);
+            if (idx_l == size_l) break;
+            val_l = large[idx_l];
+        } else if (val_s < val_l) {
+            idx_s++;
+            if (idx_s == size_s) break;
+            val_s = small[idx_s];
+        } else {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 /**
- * Generic intersection function. Passes unit tests.
+ * Generic intersection function.
  */
 int32_t intersect_uint16(const uint16_t *A, const size_t lenA,
                          const uint16_t *B, const size_t lenB, uint16_t *out) {
@@ -764,6 +791,32 @@ int32_t intersect_uint16_cardinality(const uint16_t *A, const size_t lenA,
     }
     return answer;  // NOTREACHED
 }
+
+
+bool intersect_uint16_nonempty(const uint16_t *A, const size_t lenA,
+                         const uint16_t *B, const size_t lenB) {
+    if (lenA == 0 || lenB == 0) return 0;
+    const uint16_t *endA = A + lenA;
+    const uint16_t *endB = B + lenB;
+
+    while (1) {
+        while (*A < *B) {
+        SKIP_FIRST_COMPARE:
+            if (++A == endA) return false;
+        }
+        while (*A > *B) {
+            if (++B == endB) return false;
+        }
+        if (*A == *B) {
+            return true;
+        } else {
+            goto SKIP_FIRST_COMPARE;
+        }
+    }
+    return false;  // NOTREACHED
+}
+
+
 
 /**
  * Generic intersection function.
@@ -2895,6 +2948,23 @@ int array_container_intersection_cardinality(const array_container_t *array1,
     }
 }
 
+bool array_container_intersect(const array_container_t *array1,
+                                  const array_container_t *array2) {
+    int32_t card_1 = array1->cardinality, card_2 = array2->cardinality;
+    const int threshold = 64;  // subject to tuning
+    if (card_1 * threshold < card_2) {
+        return intersect_skewed_uint16_nonempty(
+            array1->array, card_1, array2->array, card_2);
+    } else if (card_2 * threshold < card_1) {
+    	return intersect_skewed_uint16_nonempty(
+            array2->array, card_2, array1->array, card_1);
+    } else {
+    	// we do not bother vectorizing
+        return intersect_uint16_nonempty(array1->array, card_1,
+                                            array2->array, card_2);
+    }
+}
+
 /* computes the intersection of array1 and array2 and write the result to
  * array1.
  * */
@@ -3136,6 +3206,8 @@ void bitset_container_set_all(bitset_container_t *bitset) {
     bitset->cardinality = (1 << 16);
 }
 
+
+
 /* Create a new bitset. Return NULL in case of failure. */
 bitset_container_t *bitset_container_create(void) {
     bitset_container_t *bitset =
@@ -3226,8 +3298,16 @@ void bitset_container_set_range(bitset_container_t *bitset, uint32_t begin,
         bitset_container_compute_cardinality(bitset);  // could be smarter
 }
 
-//#define USEPOPCNT // when this is disabled
-// bitset_container_compute_cardinality uses AVX to compute hamming weight
+
+bool bitset_container_intersect(const bitset_container_t *src_1,
+                                  const bitset_container_t *src_2) {
+	// could vectorize, but this is probably already quite fast in practice
+    for (int i = 0; i < BITSET_CONTAINER_SIZE_IN_WORDS; i ++) {
+    	if((src_1->array[i] & src_2->array[i]) != 0) return true;
+    }
+    return false;
+}
+
 
 #ifdef USEAVX
 #ifndef WORDS_IN_AVX2_REG
@@ -4850,6 +4930,17 @@ int array_bitset_container_intersection_cardinality(
     return newcard;
 }
 
+
+bool array_bitset_container_intersect(const array_container_t *src_1,
+                                         const bitset_container_t *src_2) {
+	const int32_t origcard = src_1->cardinality;
+	for (int i = 0; i < origcard; ++i) {
+	        uint16_t key = src_1->array[i];
+	        if(bitset_container_contains(src_2, key)) return true;
+	}
+	return false;
+}
+
 /* Compute the intersection of src_1 and src_2 and write the result to
  * dst. It is allowed for dst to be equal to src_1. We assume that dst is a
  * valid container. */
@@ -5031,6 +5122,53 @@ int run_bitset_container_intersection_cardinality(
             bitset_lenrange_cardinality(src_2->array, rle.value, rle.length);
     }
     return answer;
+}
+
+
+bool array_run_container_intersect(const array_container_t *src_1,
+                                      const run_container_t *src_2) {
+	if( run_container_is_full(src_2) ) {
+	    return !array_container_empty(src_1);
+	}
+	if (src_2->n_runs == 0) {
+        return false;
+    }
+    int32_t rlepos = 0;
+    int32_t arraypos = 0;
+    rle16_t rle = src_2->runs[rlepos];
+    while (arraypos < src_1->cardinality) {
+        const uint16_t arrayval = src_1->array[arraypos];
+        while (rle.value + rle.length <
+               arrayval) {  // this will frequently be false
+            ++rlepos;
+            if (rlepos == src_2->n_runs) {
+                return false;  // we are done
+            }
+            rle = src_2->runs[rlepos];
+        }
+        if (rle.value > arrayval) {
+            arraypos = advanceUntil(src_1->array, arraypos, src_1->cardinality,
+                                    rle.value);
+        } else {
+        	return true;
+            arraypos++;
+        }
+    }
+    return false;
+}
+
+/* Compute the intersection  between src_1 and src_2
+ **/
+bool run_bitset_container_intersect(const run_container_t *src_1,
+                                       const bitset_container_t *src_2) {
+	   if( run_container_is_full(src_1) ) {
+		   return !bitset_container_empty(src_2);
+	   }
+       for (int32_t rlepos = 0; rlepos < src_1->n_runs; ++rlepos) {
+           rle16_t rle = src_1->runs[rlepos];
+           if(!bitset_lenrange_empty(src_2->array, rle.value,rle.length)) return true;
+       }
+       return false;
 }
 
 /*
@@ -6521,10 +6659,10 @@ int run_container_intersection_cardinality(const run_container_t *src_1,
     const bool if2 = run_container_is_full(src_2);
     if (if1 || if2) {
         if (if1) {
-            run_container_cardinality(src_2);
+            return run_container_cardinality(src_2);
         }
         if (if2) {
-            run_container_cardinality(src_1);
+            return run_container_cardinality(src_1);
         }
     }
     int answer = 0;
@@ -6583,6 +6721,45 @@ int run_container_intersection_cardinality(const run_container_t *src_1,
     }
     return answer;
 }
+
+bool run_container_intersect(const run_container_t *src_1,
+                                const run_container_t *src_2) {
+    const bool if1 = run_container_is_full(src_1);
+    const bool if2 = run_container_is_full(src_2);
+    if (if1 || if2) {
+        if (if1) {
+            return !run_container_empty(src_2);
+        }
+        if (if2) {
+        	return !run_container_empty(src_1);
+        }
+    }
+    int32_t rlepos = 0;
+    int32_t xrlepos = 0;
+    int32_t start = src_1->runs[rlepos].value;
+    int32_t end = start + src_1->runs[rlepos].length + 1;
+    int32_t xstart = src_2->runs[xrlepos].value;
+    int32_t xend = xstart + src_2->runs[xrlepos].length + 1;
+    while ((rlepos < src_1->n_runs) && (xrlepos < src_2->n_runs)) {
+        if (end <= xstart) {
+            ++rlepos;
+            if (rlepos < src_1->n_runs) {
+                start = src_1->runs[rlepos].value;
+                end = start + src_1->runs[rlepos].length + 1;
+            }
+        } else if (xend <= start) {
+            ++xrlepos;
+            if (xrlepos < src_2->n_runs) {
+                xstart = src_2->runs[xrlepos].value;
+                xend = xstart + src_2->runs[xrlepos].length + 1;
+            }
+        } else {  // they overlap
+            return true;
+        }
+    }
+    return false;
+}
+
 
 /* Compute the difference of src_1 and src_2 and write the result to
  * dst. It is assumed that dst is distinct from both src_1 and src_2. */
@@ -8902,6 +9079,36 @@ bool roaring_bitmap_select(const roaring_bitmap_t *bm, uint32_t rank,
     } else
         return false;
 }
+
+bool roaring_bitmap_intersect(const roaring_bitmap_t *x1,
+                                     const roaring_bitmap_t *x2) {
+    const int length1 = x1->high_low_container.size,
+              length2 = x2->high_low_container.size;
+    uint64_t answer = 0;
+    int pos1 = 0, pos2 = 0;
+
+    while (pos1 < length1 && pos2 < length2) {
+        const uint16_t s1 = ra_get_key_at_index(& x1->high_low_container, pos1);
+        const uint16_t s2 = ra_get_key_at_index(& x2->high_low_container, pos2);
+
+        if (s1 == s2) {
+            uint8_t container_type_1, container_type_2;
+            void *c1 = ra_get_container_at_index(& x1->high_low_container, pos1,
+                                                 &container_type_1);
+            void *c2 = ra_get_container_at_index(& x2->high_low_container, pos2,
+                                                 &container_type_2);
+            if( container_intersect(c1, container_type_1, c2, container_type_2) ) return true;
+            ++pos1;
+            ++pos2;
+        } else if (s1 < s2) {  // s1 < s2
+            pos1 = ra_advance_until(& x1->high_low_container, s2, pos1);
+        } else {  // s1 > s2
+            pos2 = ra_advance_until(& x2->high_low_container, s1, pos2);
+        }
+    }
+    return answer;
+}
+
 
 uint64_t roaring_bitmap_and_cardinality(const roaring_bitmap_t *x1,
                                         const roaring_bitmap_t *x2) {

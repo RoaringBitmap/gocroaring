@@ -165,6 +165,11 @@ func (rb *Bitmap) AndNot(x2 *Bitmap) {
 	C.roaring_bitmap_andnot_inplace(rb.cpointer, x2.cpointer)
 }
 
+// Intersect checks whether the two bitmaps intersect
+func (rb *Bitmap) Intersect(x2 *Bitmap) bool {
+	return bool(C.roaring_bitmap_intersect(rb.cpointer, x2.cpointer))
+}
+
 // JaccardIndex computes the Jaccard index between two bitmaps
 func (rb *Bitmap) JaccardIndex(x2 *Bitmap) float64 {
 	return float64(C.roaring_bitmap_jaccard_index(rb.cpointer, x2.cpointer))
