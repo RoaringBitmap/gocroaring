@@ -165,6 +165,31 @@ func (rb *Bitmap) AndNot(x2 *Bitmap) {
 	C.roaring_bitmap_andnot_inplace(rb.cpointer, x2.cpointer)
 }
 
+// JaccardIndex computes the Jaccard index between two bitmaps
+func (rb *Bitmap) JaccardIndex(x2 *Bitmap) float64 {
+	return float64(C.roaring_bitmap_jaccard_index(rb.cpointer, x2.cpointer))
+}
+
+// AndCardinality computes the size of the intersection between two bitmaps
+func (rb *Bitmap) AndCardinality(x2 *Bitmap) uint64 {
+	return uint64(C.roaring_bitmap_and_cardinality(rb.cpointer, x2.cpointer))
+}
+
+// XorCardinality computes the size of the symmetric difference between two bitmaps
+func (rb *Bitmap) XorCardinality(x2 *Bitmap) uint64 {
+	return uint64(C.roaring_bitmap_xor_cardinality(rb.cpointer, x2.cpointer))
+}
+
+// OrCardinality computes the size of the union between two bitmaps
+func (rb *Bitmap) OrCardinality(x2 *Bitmap) uint64 {
+	return uint64(C.roaring_bitmap_or_cardinality(rb.cpointer, x2.cpointer))
+}
+
+// AndNotCardinality computes the size of the difference between two bitmaps
+func (rb *Bitmap) AndNotCardinality(x2 *Bitmap) uint64 {
+	return uint64(C.roaring_bitmap_andnot_cardinality(rb.cpointer, x2.cpointer))
+}
+
 // Or computes the union between two bitmaps and returns the result
 func Or(x1, x2 *Bitmap) *Bitmap {
 	b := &Bitmap{C.roaring_bitmap_or(x1.cpointer, x2.cpointer)}
