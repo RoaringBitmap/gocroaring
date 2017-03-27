@@ -1,4 +1,4 @@
-/* auto-generated on Fri Mar 24 10:26:41 EDT 2017. Do not edit! */
+/* auto-generated on Mon 27 Mar 2017 17:54:41 EDT. Do not edit! */
 #include "roaring.h"
 /* begin file src/array_util.c */
 #include <assert.h>
@@ -3034,7 +3034,7 @@ int32_t array_container_number_of_runs(const array_container_t *a) {
     return nr_runs;
 }
 
-int32_t array_container_serialize(array_container_t *container, char *buf) {
+int32_t array_container_serialize(const array_container_t *container, char *buf) {
     int32_t l, off;
     uint16_t cardinality = (uint16_t)container->cardinality;
 
@@ -3056,8 +3056,8 @@ int32_t array_container_write(const array_container_t *container, char *buf) {
     return array_container_size_in_bytes(container);
 }
 
-bool array_container_equals(array_container_t *container1,
-                            array_container_t *container2) {
+bool array_container_equals(const array_container_t *container1,
+                            const array_container_t *container2) {
     if (container1->cardinality != container2->cardinality) {
         return false;
     }
@@ -3068,8 +3068,8 @@ bool array_container_equals(array_container_t *container1,
     return true;
 }
 
-bool array_container_is_subset(array_container_t *container1,
-                               array_container_t *container2) {
+bool array_container_is_subset(const array_container_t *container1,
+                               const array_container_t *container2) {
     if (container1->cardinality > container2->cardinality) {
         return false;
     }
@@ -3102,7 +3102,7 @@ int32_t array_container_read(int32_t cardinality, array_container_t *container,
     return array_container_size_in_bytes(container);
 }
 
-uint32_t array_container_serialization_len(array_container_t *container) {
+uint32_t array_container_serialization_len(const array_container_t *container) {
     return (sizeof(uint16_t) /* container->cardinality converted to 16 bit */ +
             (sizeof(uint16_t) * container->cardinality));
 }
@@ -3362,36 +3362,36 @@ int bitset_container_##opname##_nocard(const bitset_container_t *src_1, \
         i < BITSET_CONTAINER_SIZE_IN_WORDS / (WORDS_IN_AVX2_REG);       \
                                                          i+=innerloop) {\
         __m256i A1, A2, AO;                                             \
-        A1 = _mm256_lddqu_si256((__m256i *)(array_1));                  \
-        A2 = _mm256_lddqu_si256((__m256i *)(array_2));                  \
+        A1 = _mm256_lddqu_si256((const __m256i *)(array_1));                  \
+        A2 = _mm256_lddqu_si256((const __m256i *)(array_2));                  \
         AO = avx_intrinsic(A2, A1);                                     \
         _mm256_storeu_si256((__m256i *)out, AO);                        \
-        A1 = _mm256_lddqu_si256((__m256i *)(array_1 + 32));             \
-        A2 = _mm256_lddqu_si256((__m256i *)(array_2 + 32));             \
+        A1 = _mm256_lddqu_si256((const __m256i *)(array_1 + 32));             \
+        A2 = _mm256_lddqu_si256((const __m256i *)(array_2 + 32));             \
         AO = avx_intrinsic(A2, A1);                                     \
         _mm256_storeu_si256((__m256i *)(out+32), AO);                   \
-        A1 = _mm256_lddqu_si256((__m256i *)(array_1 + 64));             \
-        A2 = _mm256_lddqu_si256((__m256i *)(array_2 + 64));             \
+        A1 = _mm256_lddqu_si256((const __m256i *)(array_1 + 64));             \
+        A2 = _mm256_lddqu_si256((const __m256i *)(array_2 + 64));             \
         AO = avx_intrinsic(A2, A1);                                     \
         _mm256_storeu_si256((__m256i *)(out+64), AO);                   \
-        A1 = _mm256_lddqu_si256((__m256i *)(array_1 + 96));             \
-        A2 = _mm256_lddqu_si256((__m256i *)(array_2 + 96));             \
+        A1 = _mm256_lddqu_si256((const __m256i *)(array_1 + 96));             \
+        A2 = _mm256_lddqu_si256((const __m256i *)(array_2 + 96));             \
         AO = avx_intrinsic(A2, A1);                                     \
         _mm256_storeu_si256((__m256i *)(out+96), AO);                   \
-        A1 = _mm256_lddqu_si256((__m256i *)(array_1 + 128));            \
-        A2 = _mm256_lddqu_si256((__m256i *)(array_2 + 128));            \
+        A1 = _mm256_lddqu_si256((const __m256i *)(array_1 + 128));            \
+        A2 = _mm256_lddqu_si256((const __m256i *)(array_2 + 128));            \
         AO = avx_intrinsic(A2, A1);                                     \
         _mm256_storeu_si256((__m256i *)(out+128), AO);                  \
-        A1 = _mm256_lddqu_si256((__m256i *)(array_1 + 160));            \
-        A2 = _mm256_lddqu_si256((__m256i *)(array_2 + 160));            \
+        A1 = _mm256_lddqu_si256((const __m256i *)(array_1 + 160));            \
+        A2 = _mm256_lddqu_si256((const __m256i *)(array_2 + 160));            \
         AO = avx_intrinsic(A2, A1);                                     \
         _mm256_storeu_si256((__m256i *)(out+160), AO);                  \
-        A1 = _mm256_lddqu_si256((__m256i *)(array_1 + 192));            \
-        A2 = _mm256_lddqu_si256((__m256i *)(array_2 + 192));            \
+        A1 = _mm256_lddqu_si256((const __m256i *)(array_1 + 192));            \
+        A2 = _mm256_lddqu_si256((const __m256i *)(array_2 + 192));            \
         AO = avx_intrinsic(A2, A1);                                     \
         _mm256_storeu_si256((__m256i *)(out+192), AO);                  \
-        A1 = _mm256_lddqu_si256((__m256i *)(array_1 + 224));            \
-        A2 = _mm256_lddqu_si256((__m256i *)(array_2 + 224));            \
+        A1 = _mm256_lddqu_si256((const __m256i *)(array_1 + 224));            \
+        A2 = _mm256_lddqu_si256((const __m256i *)(array_2 + 224));            \
         AO = avx_intrinsic(A2, A1);                                     \
         _mm256_storeu_si256((__m256i *)(out+224), AO);                  \
         out+=256;                                                       \
@@ -3563,7 +3563,7 @@ int bitset_container_number_of_runs(bitset_container_t *b) {
   return num_runs;
 }
 
-int32_t bitset_container_serialize(bitset_container_t *container, char *buf) {
+int32_t bitset_container_serialize(const bitset_container_t *container, char *buf) {
   int32_t l = sizeof(uint64_t) * BITSET_CONTAINER_SIZE_IN_WORDS;
   memcpy(buf, container->array, l);
   return(l);
@@ -3640,7 +3640,7 @@ bool bitset_container_iterate64(const bitset_container_t *cont, uint32_t base, r
 }
 
 
-bool bitset_container_equals(bitset_container_t *container1, bitset_container_t *container2) {
+bool bitset_container_equals(const bitset_container_t *container1, const bitset_container_t *container2) {
 	if((container1->cardinality != BITSET_UNKNOWN_CARDINALITY) && (container2->cardinality != BITSET_UNKNOWN_CARDINALITY)) {
 		if(container1->cardinality != container2->cardinality) {
 			return false;
@@ -3654,8 +3654,8 @@ bool bitset_container_equals(bitset_container_t *container1, bitset_container_t 
 	return true;
 }
 
-bool bitset_container_is_subset(bitset_container_t *container1,
-                          bitset_container_t *container2) {
+bool bitset_container_is_subset(const bitset_container_t *container1,
+                          const bitset_container_t *container2) {
     if((container1->cardinality != BITSET_UNKNOWN_CARDINALITY) && (container2->cardinality != BITSET_UNKNOWN_CARDINALITY)) {
         if(container1->cardinality > container2->cardinality) {
             return false;
@@ -3748,6 +3748,8 @@ int bitset_container_rank(const bitset_container_t *container, uint16_t x) {
 
 extern inline const void *container_unwrap_shared(
     const void *candidate_shared_container, uint8_t *type);
+extern inline void *container_mutable_unwrap_shared(
+    void *candidate_shared_container, uint8_t *type);
 
 extern const char *get_container_name(uint8_t typecode);
 
@@ -3829,13 +3831,13 @@ int32_t container_serialize(const void *container, uint8_t typecode,
     container = container_unwrap_shared(container, &typecode);
     switch (typecode) {
         case BITSET_CONTAINER_TYPE_CODE:
-            return (bitset_container_serialize((bitset_container_t *)container,
+            return (bitset_container_serialize((const bitset_container_t *)container,
                                                buf));
         case ARRAY_CONTAINER_TYPE_CODE:
             return (
-                array_container_serialize((array_container_t *)container, buf));
+                array_container_serialize((const array_container_t *)container, buf));
         case RUN_CONTAINER_TYPE_CODE:
-            return (run_container_serialize((run_container_t *)container, buf));
+            return (run_container_serialize((const run_container_t *)container, buf));
         default:
             assert(0);
             __builtin_unreachable();
@@ -3850,10 +3852,10 @@ uint32_t container_serialization_len(const void *container, uint8_t typecode) {
             return bitset_container_serialization_len();
         case ARRAY_CONTAINER_TYPE_CODE:
             return array_container_serialization_len(
-                (array_container_t *)container);
+                (const array_container_t *)container);
         case RUN_CONTAINER_TYPE_CODE:
             return run_container_serialization_len(
-                (run_container_t *)container);
+                (const run_container_t *)container);
         default:
             assert(0);
             __builtin_unreachable();
@@ -3944,11 +3946,11 @@ void *container_clone(const void *container, uint8_t typecode) {
     container = container_unwrap_shared(container, &typecode);
     switch (typecode) {
         case BITSET_CONTAINER_TYPE_CODE:
-            return bitset_container_clone((bitset_container_t *)container);
+            return bitset_container_clone((const bitset_container_t *)container);
         case ARRAY_CONTAINER_TYPE_CODE:
-            return array_container_clone((array_container_t *)container);
+            return array_container_clone((const array_container_t *)container);
         case RUN_CONTAINER_TYPE_CODE:
-            return run_container_clone((run_container_t *)container);
+            return run_container_clone((const run_container_t *)container);
         case SHARED_CONTAINER_TYPE_CODE:
             printf("shared containers are not cloneable\n");
             assert(false);
@@ -4807,8 +4809,8 @@ bool bitset_bitset_container_iandnot(bitset_container_t *src_1,
 /* end file src/containers/mixed_andnot.c */
 /* begin file src/containers/mixed_equal.c */
 
-bool array_container_equal_bitset(array_container_t* container1,
-                                  bitset_container_t* container2) {
+bool array_container_equal_bitset(const array_container_t* container1,
+                                  const bitset_container_t* container2) {
     if (container2->cardinality != BITSET_UNKNOWN_CARDINALITY) {
         if (container2->cardinality != container1->cardinality) {
             return false;
@@ -4833,8 +4835,8 @@ bool array_container_equal_bitset(array_container_t* container1,
     return (pos == container1->cardinality);
 }
 
-bool run_container_equals_array(run_container_t* container1,
-                                array_container_t* container2) {
+bool run_container_equals_array(const run_container_t* container1,
+                                const array_container_t* container2) {
     if (run_container_cardinality(container1) != container2->cardinality)
         return false;
     int32_t pos = 0;
@@ -4855,8 +4857,8 @@ bool run_container_equals_array(run_container_t* container1,
     return (pos == container2->cardinality);
 }
 
-bool run_container_equals_bitset(run_container_t* container1,
-                                 bitset_container_t* container2) {
+bool run_container_equals_bitset(const run_container_t* container1,
+                                 const bitset_container_t* container2) {
     if (container2->cardinality != BITSET_UNKNOWN_CARDINALITY) {
         if (container2->cardinality != run_container_cardinality(container1)) {
             return false;
@@ -5193,8 +5195,8 @@ bool bitset_bitset_container_intersection(const bitset_container_t *src_1,
     if (*dst != NULL) {
         ((array_container_t *)*dst)->cardinality = newCardinality;
         bitset_extract_intersection_setbits_uint16(
-            ((bitset_container_t *)src_1)->array,
-            ((bitset_container_t *)src_2)->array,
+            ((const bitset_container_t *)src_1)->array,
+            ((const bitset_container_t *)src_2)->array,
             BITSET_CONTAINER_SIZE_IN_WORDS, ((array_container_t *)*dst)->array,
             0);
     }
@@ -5214,8 +5216,8 @@ bool bitset_bitset_container_intersection_inplace(
     if (*dst != NULL) {
         ((array_container_t *)*dst)->cardinality = newCardinality;
         bitset_extract_intersection_setbits_uint16(
-            ((bitset_container_t *)src_1)->array,
-            ((bitset_container_t *)src_2)->array,
+            ((const bitset_container_t *)src_1)->array,
+            ((const bitset_container_t *)src_2)->array,
             BITSET_CONTAINER_SIZE_IN_WORDS, ((array_container_t *)*dst)->array,
             0);
     }
@@ -5549,8 +5551,8 @@ int run_container_negation_range_inplace(run_container_t *src,
 /* end file src/containers/mixed_negation.c */
 /* begin file src/containers/mixed_subset.c */
 
-bool array_container_is_subset_bitset(array_container_t* container1,
-                                      bitset_container_t* container2) {
+bool array_container_is_subset_bitset(const array_container_t* container1,
+                                      const bitset_container_t* container2) {
     if (container2->cardinality != BITSET_UNKNOWN_CARDINALITY) {
         if (container2->cardinality < container1->cardinality) {
             return false;
@@ -5564,8 +5566,8 @@ bool array_container_is_subset_bitset(array_container_t* container1,
     return true;
 }
 
-bool run_container_is_subset_array(run_container_t* container1,
-                                   array_container_t* container2) {
+bool run_container_is_subset_array(const run_container_t* container1,
+                                   const array_container_t* container2) {
     if (run_container_cardinality(container1) > container2->cardinality)
         return false;
     int32_t start_pos = -1, stop_pos = -1;
@@ -5587,8 +5589,8 @@ bool run_container_is_subset_array(run_container_t* container1,
     return true;
 }
 
-bool array_container_is_subset_run(array_container_t* container1,
-                                   run_container_t* container2) {
+bool array_container_is_subset_run(const array_container_t* container1,
+                                   const run_container_t* container2) {
     if (container1->cardinality > run_container_cardinality(container2))
         return false;
     int i_array = 0, i_run = 0;
@@ -5610,8 +5612,8 @@ bool array_container_is_subset_run(array_container_t* container1,
     }
 }
 
-bool run_container_is_subset_bitset(run_container_t* container1,
-                                    bitset_container_t* container2) {
+bool run_container_is_subset_bitset(const run_container_t* container1,
+                                    const bitset_container_t* container2) {
     // todo: this code could be much faster
     if (container2->cardinality != BITSET_UNKNOWN_CARDINALITY) {
         if (container2->cardinality < run_container_cardinality(container1)) {
@@ -5636,8 +5638,8 @@ bool run_container_is_subset_bitset(run_container_t* container1,
     return true;
 }
 
-bool bitset_container_is_subset_run(bitset_container_t* container1,
-                                    run_container_t* container2) {
+bool bitset_container_is_subset_run(const bitset_container_t* container1,
+                                    const run_container_t* container2) {
     // todo: this code could be much faster
     if (container1->cardinality != BITSET_UNKNOWN_CARDINALITY) {
         if (container1->cardinality > run_container_cardinality(container2)) {
@@ -6874,7 +6876,7 @@ void run_container_printf_as_uint32_array(const run_container_t *cont,
     }
 }
 
-int32_t run_container_serialize(run_container_t *container, char *buf) {
+int32_t run_container_serialize(const run_container_t *container, char *buf) {
     int32_t l, off;
 
     memcpy(buf, &container->n_runs, off = sizeof(container->n_runs));
@@ -6904,7 +6906,7 @@ int32_t run_container_read(int32_t cardinality, run_container_t *container,
     return run_container_size_in_bytes(container);
 }
 
-uint32_t run_container_serialization_len(run_container_t *container) {
+uint32_t run_container_serialization_len(const run_container_t *container) {
     return (sizeof(container->n_runs) + sizeof(container->capacity) +
             sizeof(rle16_t) * container->n_runs);
 }
@@ -6979,8 +6981,8 @@ bool run_container_iterate64(const run_container_t *cont, uint32_t base,
     return true;
 }
 
-bool run_container_equals(run_container_t *container1,
-                          run_container_t *container2) {
+bool run_container_equals(const run_container_t *container1,
+                          const run_container_t *container2) {
     if (container1->n_runs != container2->n_runs) {
         return false;
     }
@@ -6992,8 +6994,8 @@ bool run_container_equals(run_container_t *container1,
     return true;
 }
 
-bool run_container_is_subset(run_container_t *container1,
-                             run_container_t *container2) {
+bool run_container_is_subset(const run_container_t *container1,
+                             const run_container_t *container2) {
     int i1 = 0, i2 = 0;
     while (i1 < container1->n_runs && i2 < container2->n_runs) {
         int start1 = container1->runs[i1].value;
@@ -8677,7 +8679,7 @@ roaring_bitmap_t *roaring_bitmap_lazy_or(const roaring_bitmap_t *x1,
                 (get_container_type(c2, container_type_2) !=
                  BITSET_CONTAINER_TYPE_CODE)) {
                 void *newc1 =
-                    (void *)container_unwrap_shared(c1, &container_type_1);
+                    container_mutable_unwrap_shared(c1, &container_type_1);
                 newc1 = container_to_bitset(newc1, container_type_1);
                 container_type_1 = BITSET_CONTAINER_TYPE_CODE;
                 c = container_lazy_ior(newc1, container_type_1, c2,
@@ -8774,7 +8776,7 @@ void roaring_bitmap_lazy_or_inplace(roaring_bitmap_t *x1,
                     // convert to bitset
                     void *oldc1 = c1;
                     uint8_t oldt1 = container_type_1;
-                    c1 = (void *)container_unwrap_shared(c1, &container_type_1);
+                    c1 = container_mutable_unwrap_shared(c1, &container_type_1);
                     c1 = container_to_bitset(c1, container_type_1);
                     container_free(oldc1, oldt1);
                     container_type_1 = BITSET_CONTAINER_TYPE_CODE;
