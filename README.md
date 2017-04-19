@@ -11,6 +11,11 @@ Roaring bitmaps are used by several important systems:
 *   [Whoosh](https://pypi.python.org/pypi/Whoosh/),
 *   eBay's [Apache Kylin](http://kylin.io).
 
+Roaring bitmaps are found to work well in many important applications:
+
+> Use Roaring for bitmap compression whenever possible. Do not use other bitmap compression methods ([Wang et al., SIGMOD 2017](http://db.ucsd.edu/wp-content/uploads/2017/03/sidm338-wangA.pdf))
+
+
 The original java version can be found at https://github.com/RoaringBitmap/RoaringBitmap
 
 There is a native Go version at https://github.com/RoaringBitmap/roaring
