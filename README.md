@@ -9,6 +9,7 @@ Roaring bitmaps are used by several important systems:
 *   [Netflix Atlas](https://github.com/Netflix/atlas),
 *   [LinkedIn Pinot](https://github.com/linkedin/pinot/wiki),
 *   [Whoosh](https://pypi.python.org/pypi/Whoosh/),
+*   [Pilosa](https://www.pilosa.com/),
 *   eBay's [Apache Kylin](http://kylin.io).
 
 Roaring bitmaps are found to work well in many important applications:
