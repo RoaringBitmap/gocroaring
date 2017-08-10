@@ -8,8 +8,11 @@ Roaring bitmaps are used by several important systems:
 *   [Apache Spark](http://spark.apache.org),
 *   [Netflix Atlas](https://github.com/Netflix/atlas),
 *   [LinkedIn Pinot](https://github.com/linkedin/pinot/wiki),
+*   [OpenSearchServer](http://www.opensearchserver.com),
+*   [Cloud Torrent](https://github.com/jpillora/cloud-torrent),
 *   [Whoosh](https://pypi.python.org/pypi/Whoosh/),
 *   [Pilosa](https://www.pilosa.com/),
+*   [Microsoft Visual Studio Team Services (VSTS)](https://www.visualstudio.com/team-services/),
 *   eBay's [Apache Kylin](http://kylin.io).
 
 Roaring bitmaps are found to work well in many important applications:
