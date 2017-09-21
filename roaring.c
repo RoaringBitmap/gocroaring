@@ -1,4 +1,4 @@
-/* auto-generated on Thu  7 Sep 2017 15:45:07 EDT. Do not edit! */
+/* auto-generated on Wed Sep 20 20:29:00 EDT 2017. Do not edit! */
 #include "roaring.h"
 /* begin file src/array_util.c */
 #include <assert.h>
@@ -11,8 +11,7 @@
 extern inline int32_t binarySearch(const uint16_t *array, int32_t lenarray,
                                    uint16_t ikey);
 
-#ifdef IS_X64
-
+#ifdef USESSE4
 // used by intersect_vector16
 ALIGNED(0x1000)
 static const uint8_t shuffle_mask16[] = {
@@ -639,7 +638,7 @@ int32_t difference_vector16(const uint16_t *__restrict__ A, size_t s_a,
     return count;
 }
 
-#endif  // IS_X64
+#endif  // USESSE4
 
 
 
@@ -1129,7 +1128,7 @@ int32_t xor_uint16(const uint16_t *array_1, int32_t card_1,
     return pos_out;
 }
 
-#if defined(IS_X64)
+#ifdef USESSE4
 
 /***
  * start of the SIMD 16-bit union code
@@ -1776,7 +1775,7 @@ uint32_t xor_vector16(const uint16_t *__restrict__ array1, uint32_t length1,
  * End of SIMD 16-bit XOR code
  */
 
-#endif  // IS_X64
+#endif  // USESSE4
 
 size_t union_uint32(const uint32_t *set_1, size_t size_1, const uint32_t *set_2,
                     size_t size_2, uint32_t *buffer) {
@@ -1879,8 +1878,7 @@ size_t union_uint32_card(const uint32_t *set_1, size_t size_1,
 #include <string.h>
 
 
-#if defined(IS_X64) || defined(USEAVX)
-
+#ifdef IS_X64
 static uint8_t lengthTable[256] = {
     0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4, 1, 2, 2, 3, 2, 3, 3, 4,
     2, 3, 3, 4, 3, 4, 4, 5, 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
