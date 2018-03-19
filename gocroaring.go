@@ -334,7 +334,7 @@ func (rb *Bitmap) String() string {
 // Read reads a serialized version of the bitmap (you need to call Free on it once you are done)
 func Read(b []byte) (*Bitmap, error) {
 	bchar := (*C.char)(unsafe.Pointer(&b[0]))
-	answer := &Bitmap{C.roaring_bitmap_portable_deserialize(bchar)}
+	answer := &Bitmap{C.roaring_bitmap_portable_deserialize_safe(bchar, C.size_t(len(b)))}
 	if answer.cpointer == nil {
 		return nil, errors.New("failed to read roaring array")
 	}
