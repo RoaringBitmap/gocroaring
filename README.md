@@ -30,6 +30,10 @@ This code is licensed under Apache License, Version 2.0 (ASL2.0).
 Copyright 2016 by the authors.
 
 
+### Benchmarking
+
+See https://github.com/lemire/gobitmapbenchmark for a comparison between this wrapper and the Go native version.
+
 ### References
 
 -  Daniel Lemire, Owen Kaser, Nathan Kurz, Luca Deri, Chris O'Hara, François Saint-Jacques, Gregory Ssi-Yan-Kai, Roaring Bitmaps: Implementation of an Optimized Software Library [arXiv:1709.07821](https://arxiv.org/abs/1709.07821)
