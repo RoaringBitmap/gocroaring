@@ -26,7 +26,7 @@ func PrintMemUsage() {
 
 // go test -run StressMemory
 func TestStressMemory(t *testing.T) {
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < 10; i++ {
 		r0 := New()
 		var j uint32
 		for k := 0; k < 10000000; k++ {
