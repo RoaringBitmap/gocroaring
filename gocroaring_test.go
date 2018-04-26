@@ -2,11 +2,42 @@ package gocroaring
 
 import (
 	"fmt"
+	"runtime"
 	"testing"
+
+	"math/rand"
 )
 
 func TestDisplayVersion(t *testing.T) {
 	fmt.Printf("CRoaring %v.%v.%v\n", CRoaringMajor, CRoaringMinor, CRoaringRevision)
+}
+func bToMb(b uint64) uint64 {
+	return b / 1024 / 1024
+}
+func PrintMemUsage() {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	// For info on each, see: https://golang.org/pkg/runtime/#MemStats
+	fmt.Printf("Alloc = %v MiB", bToMb(m.Alloc))
+	fmt.Printf("\tTotalAlloc = %v MiB", bToMb(m.TotalAlloc))
+	fmt.Printf("\tSys = %v MiB", bToMb(m.Sys))
+	fmt.Printf("\tNumGC = %v\n", m.NumGC)
+}
+
+// go test -run StressMemory
+func TestStressMemory(t *testing.T) {
+	for i := 0; i < 1000; i++ {
+		r0 := New()
+		var j uint32
+		for i := 0; i < 10000000; i++ {
+			j = uint32(rand.Intn(10000000))
+			r0.Add(j)
+		}
+		r0.RunOptimize() // improves compression
+		buf0 := make([]byte, r0.SerializedSizeInBytes())
+		r0.Write(buf0) // we omit error handling
+		PrintMemUsage()
+	}
 }
 
 // go test -run MemoryUsage

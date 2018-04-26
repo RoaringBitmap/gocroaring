@@ -90,7 +90,7 @@ func (rb *Bitmap) Contains(x uint32) bool {
 
 // Clear removes all elements from the bitmap
 func (rb *Bitmap) Clear() {
-        C.roaring_bitmap_clear(rb.cpointer)
+	C.roaring_bitmap_clear(rb.cpointer)
 }
 
 // Remove the integer x from the bitmap
