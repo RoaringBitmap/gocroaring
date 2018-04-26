@@ -29,7 +29,7 @@ func TestStressMemory(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		r0 := New()
 		var j uint32
-		for i := 0; i < 10000000; i++ {
+		for k := 0; k < 10000000; k++ {
 			j = uint32(rand.Intn(10000000))
 			r0.Add(j)
 		}
