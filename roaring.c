@@ -1,4 +1,4 @@
-/* auto-generated on Wed May 23 19:25:15 EDT 2018. Do not edit! */
+/* auto-generated on Fri May 25 14:24:35 EDT 2018. Do not edit! */
 #include "roaring.h"
 
 /* used for http://dmalloc.com/ Dmalloc - Debug Malloc Library */
@@ -2942,10 +2942,6 @@ static inline int32_t clamp(int32_t val, int32_t min, int32_t max) {
 void array_container_grow(array_container_t *container, int32_t min,
                           int32_t max, bool preserve) {
     int32_t new_capacity = clamp(grow_capacity(container->capacity), min, max);
-
-    // if we are within 1/16th of the max, go to max
-    if (new_capacity > max - max / 16) new_capacity = max;
-
     container->capacity = new_capacity;
     uint16_t *array = container->array;
 
@@ -7541,6 +7537,10 @@ static inline uint32_t minimum_uint32(uint32_t a, uint32_t b) {
     return (a < b) ? a : b;
 }
 
+static inline uint64_t minimum_uint64(uint64_t a, uint64_t b) {
+    return (a < b) ? a : b;
+}
+
 roaring_bitmap_t *roaring_bitmap_from_range(uint64_t min, uint64_t max,
                                             uint32_t step) {
     if(max >= UINT64_C(0x100000000)) {
@@ -7555,11 +7555,11 @@ roaring_bitmap_t *roaring_bitmap_from_range(uint64_t min, uint64_t max,
         }
         return answer;
     }
-    uint32_t min_tmp = min;
+    uint64_t min_tmp = min;
     do {
         uint32_t key = min_tmp >> 16;
         uint32_t container_min = min_tmp & 0xFFFF;
-        uint32_t container_max = minimum_uint32(max - (key << 16), 1 << 16);
+        uint32_t container_max = minimum_uint64(max - (key << 16), 1 << 16);
         uint8_t type;
         void *container = container_from_range(&type, container_min,
                                                container_max, (uint16_t)step);
