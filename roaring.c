@@ -1,4 +1,4 @@
-/* auto-generated on Fri May 25 14:24:35 EDT 2018. Do not edit! */
+/* auto-generated on Sat Jun  9 00:59:02 EDT 2018. Do not edit! */
 #include "roaring.h"
 
 /* used for http://dmalloc.com/ Dmalloc - Debug Malloc Library */
@@ -716,10 +716,10 @@ static void binarySearch4(const uint16_t *array, int32_t n, uint16_t target1,
     base4 = (base4[half] < target4) ? &base4[half] : base4;
     n -= half;
   }
-  *index1 = (*base1 < target1) + base1 - array;
-  *index2 = (*base2 < target2) + base2 - array;
-  *index3 = (*base3 < target3) + base3 - array;
-  *index4 = (*base4 < target4) + base4 - array;
+  *index1 = (int32_t)((*base1 < target1) + base1 - array);
+  *index2 = (int32_t)((*base2 < target2) + base2 - array);
+  *index3 = (int32_t)((*base3 < target3) + base3 - array);
+  *index4 = (int32_t)((*base4 < target4) + base4 - array);
 }
 
 /**
@@ -742,8 +742,8 @@ static void binarySearch2(const uint16_t *array, int32_t n, uint16_t target1,
     base2 = (base2[half] < target2) ? &base2[half] : base2;
     n -= half;
   }
-  *index1 = (*base1 < target1) + base1 - array;
-  *index2 = (*base2 < target2) + base2 - array;
+  *index1 = (int32_t)((*base1 < target1) + base1 - array);
+  *index2 = (int32_t)((*base2 < target2) + base2 - array);
 }
 
 /* Computes the intersection between one small and one large set of uint16_t.
@@ -766,7 +766,7 @@ int32_t intersect_skewed_uint16(const uint16_t *small, size_t size_s,
     uint16_t target2 = small[idx_s + 1];
     uint16_t target3 = small[idx_s + 2];
     uint16_t target4 = small[idx_s + 3];
-    binarySearch4(large + idx_l, size_l - idx_l, target1, target2, target3,
+    binarySearch4(large + idx_l, (int32_t)(size_l - idx_l), target1, target2, target3,
                   target4, &index1, &index2, &index3, &index4);
     if ((index1 + idx_l < size_l) && (large[idx_l + index1] == target1)) {
       buffer[pos++] = target1;
@@ -786,7 +786,7 @@ int32_t intersect_skewed_uint16(const uint16_t *small, size_t size_s,
   if ((idx_s + 2 <= size_s) && (idx_l < size_l)) {
     uint16_t target1 = small[idx_s];
     uint16_t target2 = small[idx_s + 1];
-    binarySearch2(large + idx_l, size_l - idx_l, target1, target2, &index1,
+    binarySearch2(large + idx_l, (int32_t)(size_l - idx_l), target1, target2, &index1,
                   &index2);
     if ((index1 + idx_l < size_l) && (large[idx_l + index1] == target1)) {
       buffer[pos++] = target1;
@@ -799,7 +799,7 @@ int32_t intersect_skewed_uint16(const uint16_t *small, size_t size_s,
   }
   if ((idx_s < size_s) && (idx_l < size_l)) {
     uint16_t val_s = small[idx_s];
-    int32_t index = binarySearch(large + idx_l, size_l - idx_l, val_s);
+    int32_t index = binarySearch(large + idx_l, (int32_t)(size_l - idx_l), val_s);
     if (index >= 0)
       buffer[pos++] = val_s;
   }
@@ -1883,11 +1883,11 @@ size_t fast_union_uint16(const uint16_t *set_1, size_t size_1, const uint16_t *s
 #ifdef ROARING_VECTOR_OPERATIONS_ENABLED
     // compute union with smallest array first
     if (size_1 < size_2) {
-        return union_vector16(set_1, size_1,
-                                          set_2, size_2, buffer);
+        return union_vector16(set_1, (uint32_t)size_1,
+                                          set_2, (uint32_t)size_2, buffer);
     } else {
-        return union_vector16(set_2, size_2,
-                                          set_1, size_1, buffer);
+        return union_vector16(set_2, (uint32_t)size_2,
+                                          set_1, (uint32_t)size_1, buffer);
     }
 #else
     // compute union with smallest array first
@@ -2995,7 +2995,7 @@ void array_container_union(const array_container_t *array_1,
     if (out->capacity < max_cardinality) {
       array_container_grow(out, max_cardinality, 2 * DEFAULT_MAX_SIZE, false);
     }
-    out->cardinality = fast_union_uint16(array_1->array, card_1,
+    out->cardinality = (int32_t)fast_union_uint16(array_1->array, card_1,
                                       array_2->array, card_2, out->array);
 
 }
@@ -3481,7 +3481,7 @@ bool bitset_container_intersect(const bitset_container_t *src_1,
 #endif
 /* Get the number of bits set (force computation) */
 int bitset_container_compute_cardinality(const bitset_container_t *bitset) {
-    return avx2_harley_seal_popcount256(
+    return (int) avx2_harley_seal_popcount256(
         (const __m256i *)bitset->array,
         BITSET_CONTAINER_SIZE_IN_WORDS / (WORDS_IN_AVX2_REG));
 }
@@ -3574,7 +3574,7 @@ int bitset_container_##opname(const bitset_container_t *src_1,          \
     const __m256i * __restrict__ array_1 = (const __m256i *) src_1->array; \
     const __m256i * __restrict__ array_2 = (const __m256i *) src_2->array; \
     __m256i *out = (__m256i *) dst->array;                              \
-    dst->cardinality = avx2_harley_seal_popcount256andstore_##opname(array_2,\
+    dst->cardinality = (int32_t)avx2_harley_seal_popcount256andstore_##opname(array_2,\
     		array_1, out,BITSET_CONTAINER_SIZE_IN_WORDS / (WORDS_IN_AVX2_REG));\
     return dst->cardinality;                                            \
 }                                                                       \
@@ -3583,7 +3583,7 @@ int bitset_container_##opname##_justcard(const bitset_container_t *src_1, \
                               const bitset_container_t *src_2) {        \
     const __m256i * __restrict__ data1 = (const __m256i *) src_1->array; \
     const __m256i * __restrict__ data2 = (const __m256i *) src_2->array; \
-    return avx2_harley_seal_popcount256_##opname(data2,                \
+    return (int)avx2_harley_seal_popcount256_##opname(data2,                \
     		data1, BITSET_CONTAINER_SIZE_IN_WORDS / (WORDS_IN_AVX2_REG));\
 }
 
@@ -5334,8 +5334,7 @@ bool array_run_container_intersect(const array_container_t *src_1,
             arraypos = advanceUntil(src_1->array, arraypos, src_1->cardinality,
                                     rle.value);
         } else {
-        	return true;
-            arraypos++;
+            return true;
         }
     }
     return false;
@@ -6065,7 +6064,7 @@ bool array_array_container_inplace_union(array_container_t *src_1,
           return false;  // not a bitset
         } else {
           memmove(src_1->array + src_2->cardinality, src_1->array, src_1->cardinality * sizeof(uint16_t));
-          src_1->cardinality = fast_union_uint16(src_1->array + src_2->cardinality, src_1->cardinality,
+          src_1->cardinality = (int32_t)fast_union_uint16(src_1->array + src_2->cardinality, src_1->cardinality,
                                   src_2->array, src_2->cardinality, src_1->array);
           return false; // not a bitset
         }
@@ -6137,7 +6136,7 @@ bool array_array_container_lazy_inplace_union(array_container_t *src_1,
           return false;  // not a bitset
         } else {
           memmove(src_1->array + src_2->cardinality, src_1->array, src_1->cardinality * sizeof(uint16_t));
-          src_1->cardinality = fast_union_uint16(src_1->array + src_2->cardinality, src_1->cardinality,
+          src_1->cardinality = (int32_t)fast_union_uint16(src_1->array + src_2->cardinality, src_1->cardinality,
                                   src_2->array, src_2->cardinality, src_1->array);
           return false; // not a bitset
         }
@@ -7550,16 +7549,16 @@ roaring_bitmap_t *roaring_bitmap_from_range(uint64_t min, uint64_t max,
     if (max <= min) return NULL;
     roaring_bitmap_t *answer = roaring_bitmap_create();
     if (step >= (1 << 16)) {
-        for (uint32_t value = min; value < max; value += step) {
+        for (uint32_t value = (uint32_t)min; value < max; value += step) {
             roaring_bitmap_add(answer, value);
         }
         return answer;
     }
     uint64_t min_tmp = min;
     do {
-        uint32_t key = min_tmp >> 16;
+        uint32_t key = (uint32_t)min_tmp >> 16;
         uint32_t container_min = min_tmp & 0xFFFF;
-        uint32_t container_max = minimum_uint64(max - (key << 16), 1 << 16);
+        uint32_t container_max = (uint32_t)minimum_uint64(max - (key << 16), 1 << 16);
         uint8_t type;
         void *container = container_from_range(&type, container_min,
                                                container_max, (uint16_t)step);
