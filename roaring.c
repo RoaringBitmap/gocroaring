@@ -1,4 +1,4 @@
-/* auto-generated on Sat Jun  9 00:59:02 EDT 2018. Do not edit! */
+/* auto-generated on Fri Jun 15 13:35:52 EDT 2018. Do not edit! */
 #include "roaring.h"
 
 /* used for http://dmalloc.com/ Dmalloc - Debug Malloc Library */
@@ -4487,6 +4487,23 @@ void *convert_run_optimize(void *c, uint8_t typecode_original,
         return NULL;
     }
 }
+
+bitset_container_t *bitset_container_from_run_range(const run_container_t *run,
+                                                    uint32_t min, uint32_t max) {
+    bitset_container_t *bitset = bitset_container_create();
+    int32_t union_cardinality = 0;
+    for (int32_t i = 0; i < run->n_runs; ++i) {
+        uint32_t rle_min = run->runs[i].value;
+        uint32_t rle_max = rle_min + run->runs[i].length;
+        bitset_set_lenrange(bitset->array, rle_min, rle_max - rle_min);
+        union_cardinality += run->runs[i].length + 1;
+    }
+    union_cardinality += max - min + 1;
+    union_cardinality -= bitset_lenrange_cardinality(bitset->array, min, max-min);
+    bitset_set_lenrange(bitset->array, min, max - min);
+    bitset->cardinality = union_cardinality;
+    return bitset;
+}
 /* end file src/containers/convert.c */
 /* begin file src/containers/mixed_andnot.c */
 /*
@@ -6612,54 +6629,6 @@ void run_container_free(run_container_t *run) {
     free(run);
 }
 
-#ifdef USEAVX
-
-/* Get the cardinality of `run'. Requires an actual computation. */
-int run_container_cardinality(const run_container_t *run) {
-    const int32_t n_runs = run->n_runs;
-    const rle16_t *runs = run->runs;
-
-    /* by initializing with n_runs, we omit counting the +1 for each pair. */
-    int sum = n_runs;
-    int32_t k = 0;
-    const int32_t step = sizeof(__m256i) / sizeof(rle16_t);
-    if (n_runs > step) {
-        __m256i total = _mm256_setzero_si256();
-        for (; k + step <= n_runs; k += step) {
-            __m256i ymm1 = _mm256_lddqu_si256((const __m256i *)(runs + k));
-            __m256i justlengths = _mm256_srli_epi32(ymm1, 16);
-            total = _mm256_add_epi32(total, justlengths);
-        }
-        // a store might be faster than extract?
-        uint32_t buffer[sizeof(__m256i) / sizeof(rle16_t)];
-        _mm256_storeu_si256((__m256i *)buffer, total);
-        sum += (buffer[0] + buffer[1]) + (buffer[2] + buffer[3]) +
-               (buffer[4] + buffer[5]) + (buffer[6] + buffer[7]);
-    }
-    for (; k < n_runs; ++k) {
-        sum += runs[k].length;
-    }
-
-    return sum;
-}
-
-#else
-
-/* Get the cardinality of `run'. Requires an actual computation. */
-int run_container_cardinality(const run_container_t *run) {
-    const int32_t n_runs = run->n_runs;
-    const rle16_t *runs = run->runs;
-
-    /* by initializing with n_runs, we omit counting the +1 for each pair. */
-    int sum = n_runs;
-    for (int k = 0; k < n_runs; ++k) {
-        sum += runs[k].length;
-    }
-
-    return sum;
-}
-#endif
-
 void run_container_grow(run_container_t *run, int32_t min, bool copy) {
     int32_t newCapacity =
         (run->capacity == 0)
@@ -7568,6 +7537,55 @@ roaring_bitmap_t *roaring_bitmap_from_range(uint64_t min, uint64_t max,
     } while (min_tmp < max);
     // cardinality of bitmap will be ((uint64_t) max - min + step - 1 ) / step
     return answer;
+}
+
+void roaring_bitmap_add_range(roaring_bitmap_t *ra, uint32_t min, uint32_t max) {
+    if (min > max) {
+        return;
+    }
+
+    uint32_t min_key = min >> 16;
+    uint32_t max_key = max >> 16;
+
+    int32_t num_required_containers = max_key - min_key + 1;
+    int32_t suffix_length = count_greater(ra->high_low_container.keys,
+                                          ra->high_low_container.size,
+                                          max_key);
+    int32_t prefix_length = count_less(ra->high_low_container.keys,
+                                       ra->high_low_container.size - suffix_length,
+                                       min_key);
+    int32_t common_length = ra->high_low_container.size - prefix_length - suffix_length;
+
+    if (num_required_containers > common_length) {
+        ra_shift_right(&ra->high_low_container, suffix_length,
+                       num_required_containers - common_length);
+    }
+
+    int32_t src = prefix_length + common_length - 1;
+    int32_t dst = ra->high_low_container.size - suffix_length - 1;
+    for (uint32_t key = max_key; key != min_key-1; key--) { // beware of min_key==0
+        uint32_t container_min = (min_key == key) ? (min & 0xffff) : 0;
+        uint32_t container_max = (max_key == key) ? (max & 0xffff) : 0xffff;
+        void* new_container;
+        uint8_t new_type;
+
+        if (src >= 0 && ra->high_low_container.keys[src] == key) {
+            new_container = container_add_range(ra->high_low_container.containers[src],
+                                                ra->high_low_container.typecodes[src],
+                                                container_min, container_max, &new_type);
+            if (new_container != ra->high_low_container.containers[src]) {
+                container_free(ra->high_low_container.containers[src],
+                               ra->high_low_container.typecodes[src]);
+            }
+            src--;
+        } else {
+            new_container = container_from_range(&new_type, container_min,
+                                                 container_max+1, 1);
+        }
+        ra_replace_key_and_container_at_index(&ra->high_low_container, dst,
+                                              key, new_container, new_type);
+        dst--;
+    }
 }
 
 void roaring_bitmap_printf(const roaring_bitmap_t *ra) {
@@ -9055,7 +9073,7 @@ roaring_bitmap_t *roaring_bitmap_flip(const roaring_bitmap_t *x1,
 
         if (lb_end != 0xFFFF) --hb_end;  // later we'll handle the partial block
 
-        for (uint16_t hb = hb_start; hb <= hb_end; ++hb) {
+        for (uint32_t hb = hb_start; hb <= hb_end; ++hb) {
             insert_fully_flipped_container(&ans->high_low_container,
                                            &x1->high_low_container, hb);
         }
@@ -9101,7 +9119,7 @@ void roaring_bitmap_flip_inplace(roaring_bitmap_t *x1, uint64_t range_start,
 
         if (lb_end != 0xFFFF) --hb_end;
 
-        for (uint16_t hb = hb_start; hb <= hb_end; ++hb) {
+        for (uint32_t hb = hb_start; hb <= hb_end; ++hb) {
             inplace_fully_flip_container(&x1->high_low_container, hb);
         }
 
@@ -9706,6 +9724,7 @@ if (!ra->keys || !ra->containers || !ra->typecodes) {
     ra->containers = newcontainers;
     ra->keys = newkeys;
     ra->typecodes = newtypecodes;
+    ra->allocation_size = new_capacity;
     free(oldbigalloc);
     return true;
 }
@@ -10067,6 +10086,20 @@ void ra_copy_range(roaring_array_t *ra, uint32_t begin, uint32_t end,
             sizeof(uint8_t) * range);
 }
 
+void ra_shift_right(roaring_array_t *ra, int32_t count, int32_t distance) {
+    extend_array(ra, distance);
+    int32_t srcpos = ra->size - count;
+    int32_t dstpos = srcpos + distance;
+    memmove(&(ra->keys[dstpos]), &(ra->keys[srcpos]),
+            sizeof(uint16_t) * count);
+    memmove(&(ra->containers[dstpos]), &(ra->containers[srcpos]),
+            sizeof(void *) * count);
+    memmove(&(ra->typecodes[dstpos]), &(ra->typecodes[srcpos]),
+            sizeof(uint8_t) * count);
+    ra->size += distance;
+}
+
+
 size_t ra_size_in_bytes(roaring_array_t *ra) {
     size_t cardinality = 0;
     size_t tot_len =
@@ -10215,6 +10248,9 @@ size_t ra_portable_deserialize_size(const char *buf, const size_t maxbytes) {
         memcpy(&size, buf, sizeof(int32_t));
         buf += sizeof(uint32_t);
     }
+    if (size > (1<<16)) {
+       return 0; // logically impossible
+    }
     char *bitmapOfRunContainers = NULL;
     bool hasrun = (cookie & 0xFFFF) == SERIAL_COOKIE;
     if (hasrun) {
@@ -10303,6 +10339,11 @@ bool ra_portable_deserialize(roaring_array_t *answer, const char *buf, const siz
         }
         memcpy(&size, buf, sizeof(int32_t));
         buf += sizeof(uint32_t);
+    }
+    if (size > (1<<16)) {
+       fprintf(stderr, "You cannot have so many containers, the data must be corrupted: %u\n",
+                size);
+       return false; // logically impossible
     }
     const char *bitmapOfRunContainers = NULL;
     bool hasrun = (cookie & 0xFFFF) == SERIAL_COOKIE;
