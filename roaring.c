@@ -1,4 +1,4 @@
-/* auto-generated on Fri 15 Jun 2018 15:22:10 EDT. Do not edit! */
+/* auto-generated on Fri 15 Jun 2018 19:17:15 EDT. Do not edit! */
 #include "roaring.h"
 
 /* used for http://dmalloc.com/ Dmalloc - Debug Malloc Library */
@@ -2880,6 +2880,17 @@ array_container_t *array_container_create_given_capacity(int32_t size) {
 /* Create a new array. Return NULL in case of failure. */
 array_container_t *array_container_create() {
     return array_container_create_given_capacity(ARRAY_DEFAULT_INIT_SIZE);
+}
+
+/* Create a new array containing all values in [min,max). */
+array_container_t * array_container_create_range(uint32_t min, uint32_t max) {
+    array_container_t * answer = array_container_create_given_capacity(max - min + 1);
+    if(answer == NULL) return answer;
+    answer->cardinality = 0;
+    for(uint32_t k = min; k < max; k++) {
+      answer->array[answer->cardinality++] = k;
+    }
+    return answer;
 }
 
 /* Duplicate container */
@@ -7369,6 +7380,8 @@ extern inline bool roaring_bitmap_contains(const roaring_bitmap_t *r,
                                            uint32_t val);
 extern inline bool roaring_bitmap_is_strict_subset(const roaring_bitmap_t *ra1,
                                                    const roaring_bitmap_t *ra2);
+extern inline void roaring_bitmap_add_range(roaring_bitmap_t *ra, uint64_t min,
+  uint64_t max);
 
 // this is like roaring_bitmap_add, but it populates pointer arguments in such a
 // way
@@ -8722,7 +8735,7 @@ bool roaring_move_uint32_iterator_equalorlarger(roaring_uint32_iterator_t *it, u
 
 bool roaring_advance_uint32_iterator(roaring_uint32_iterator_t *it) {
     if (it->container_index >= it->parent->high_low_container.size) {
-        return false;
+        return (it->has_value = false);
     }
     uint32_t wordindex;  // used for bitsets
     uint64_t word;       // used for bitsets
@@ -8744,7 +8757,7 @@ bool roaring_advance_uint32_iterator(roaring_uint32_iterator_t *it) {
             if (word != 0) {
                 it->in_container_index = wordindex * 64 + __builtin_ctzll(word);
                 it->current_value = it->highbits | it->in_container_index;
-                return true;
+                return (it->has_value = true);
             }
             break;
         case ARRAY_CONTAINER_TYPE_CODE:
@@ -8758,9 +8771,12 @@ bool roaring_advance_uint32_iterator(roaring_uint32_iterator_t *it) {
             }
             break;
         case RUN_CONTAINER_TYPE_CODE:
+            if(it->current_value == UINT32_MAX) {
+              return (it->has_value = false); // without this, we risk an overflow to zero
+            }
             it->current_value++;
             if (it->current_value <= it->in_run_index) {
-                return true;
+                return (it->has_value = true);
             }
             it->run_index++;
             if (it->run_index <
@@ -8773,7 +8789,7 @@ bool roaring_advance_uint32_iterator(roaring_uint32_iterator_t *it) {
                                    ((const run_container_t *)(it->container))
                                        ->runs[it->run_index]
                                        .length;
-                return true;
+                return (it->has_value = true);
             }
             break;
         default:
@@ -8782,8 +8798,7 @@ bool roaring_advance_uint32_iterator(roaring_uint32_iterator_t *it) {
     }  // switch (typecode)
     // moving to next container
     it->container_index++;
-    it->has_value = loadfirstvalue(it);
-    return it->has_value;
+    return (it->has_value = loadfirstvalue(it));
 }
 
 uint32_t roaring_read_uint32_iterator(roaring_uint32_iterator_t *it, uint32_t* buf, uint32_t count) {
@@ -9123,7 +9138,6 @@ void roaring_bitmap_flip_inplace(roaring_bitmap_t *x1, uint64_t range_start,
         for (uint32_t hb = hb_start; hb <= hb_end; ++hb) {
             inplace_fully_flip_container(&x1->high_low_container, hb);
         }
-
         // handle a partial final container
         if (lb_end != 0xFFFF) {
             inplace_flip_container(&x1->high_low_container, hb_end + 1, 0,
