@@ -1,4 +1,4 @@
-/* auto-generated on Fri 15 Jun 2018 19:17:15 EDT. Do not edit! */
+/* auto-generated on Mon Jun 18 07:26:21 EDT 2018. Do not edit! */
 #include "roaring.h"
 
 /* used for http://dmalloc.com/ Dmalloc - Debug Malloc Library */
@@ -7378,10 +7378,6 @@ int run_container_rank(const run_container_t *container, uint16_t x) {
 
 extern inline bool roaring_bitmap_contains(const roaring_bitmap_t *r,
                                            uint32_t val);
-extern inline bool roaring_bitmap_is_strict_subset(const roaring_bitmap_t *ra1,
-                                                   const roaring_bitmap_t *ra2);
-extern inline void roaring_bitmap_add_range(roaring_bitmap_t *ra, uint64_t min,
-  uint64_t max);
 
 // this is like roaring_bitmap_add, but it populates pointer arguments in such a
 // way
@@ -7601,6 +7597,10 @@ void roaring_bitmap_add_range_closed(roaring_bitmap_t *ra, uint32_t min, uint32_
     }
 }
 
+void roaring_bitmap_add_range(roaring_bitmap_t *ra, uint64_t min, uint64_t max) {
+  if(max == min) return;
+  roaring_bitmap_add_range_closed(ra, min, max - 1);
+}
 
 void roaring_bitmap_printf(const roaring_bitmap_t *ra) {
     printf("{");
@@ -7781,7 +7781,6 @@ void roaring_bitmap_remove(roaring_bitmap_t *r, uint32_t val) {
     }
 }
 
-extern bool roaring_bitmap_contains(const roaring_bitmap_t *r, uint32_t val);
 
 // there should be some SIMD optimizations possible here
 roaring_bitmap_t *roaring_bitmap_and(const roaring_bitmap_t *x1,
@@ -9671,6 +9670,61 @@ uint64_t roaring_bitmap_xor_cardinality(const roaring_bitmap_t *x1,
     const uint64_t c2 = roaring_bitmap_get_cardinality(x2);
     const uint64_t inter = roaring_bitmap_and_cardinality(x1, x2);
     return c1 + c2 - 2 * inter;
+}
+
+
+/**
+ * Check whether a range of values from range_start (included) to range_end (excluded) is present
+ */
+bool roaring_bitmap_contains_range(const roaring_bitmap_t *r, uint64_t range_start, uint64_t range_end) {
+    if(range_end >= UINT64_C(0x100000000)) {
+        range_end = UINT64_C(0x100000000);
+    }
+    if (range_start >= range_end) return true;  // empty range are always contained!
+    if (range_end - range_start == 1) return roaring_bitmap_contains(r, range_start);
+
+    uint16_t hb_rs = (uint16_t)(range_start >> 16);
+    uint16_t hb_re = (uint16_t)((range_end - 1) >> 16);
+    const int32_t span = hb_re - hb_rs;
+    const int32_t hlc_sz = ra_get_size(&r->high_low_container);
+    if (hlc_sz < span) {
+      return false;
+    }
+    int32_t is = ra_get_index(&r->high_low_container, hb_rs);
+    int32_t ie = ra_get_index(&r->high_low_container, hb_re);
+    ie = (ie < 0 ? -ie - 1 : ie);
+    if ((is < 0) || ((ie - is) != span)) {
+       return false;
+    }
+    const uint32_t lb_rs = range_start & 0xFFFF;
+    const uint32_t lb_re = ((range_end - 1) & 0xFFFF) + 1;
+    uint8_t typecode;
+    void *container = ra_get_container_at_index(&r->high_low_container, is, &typecode);
+    if (hb_rs == hb_re) {
+      return container_contains_range(container, lb_rs, lb_re, typecode);
+    }
+    if (!container_contains_range(container, lb_rs, 1 << 16, typecode)) {
+      return false;
+    }
+    container = ra_get_container_at_index(&r->high_low_container, ie, &typecode);
+    if (!container_contains_range(container, 0, lb_re, typecode)) {
+        return false;
+    }
+    for (int32_t i = is + 1; i < ie; ++i){
+        container = ra_get_container_at_index(&r->high_low_container, i, &typecode);
+        if (!container_is_full(container, typecode) ) {
+          return false;
+        }
+    }
+    return true;
+}
+
+
+bool roaring_bitmap_is_strict_subset(const roaring_bitmap_t *ra1,
+                                            const roaring_bitmap_t *ra2) {
+    return (roaring_bitmap_get_cardinality(ra2) >
+                roaring_bitmap_get_cardinality(ra1) &&
+            roaring_bitmap_is_subset(ra1, ra2));
 }
 /* end file src/roaring.c */
 /* begin file src/roaring_array.c */
