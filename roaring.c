@@ -1,4 +1,4 @@
-/* auto-generated on Mon 18 Jun 2018 21:19:29 CEST. Do not edit! */
+/* auto-generated on Thu Jun 21 09:55:37 EDT 2018. Do not edit! */
 #include "roaring.h"
 
 /* used for http://dmalloc.com/ Dmalloc - Debug Malloc Library */
@@ -7579,6 +7579,7 @@ void roaring_bitmap_add_range_closed(roaring_bitmap_t *ra, uint32_t min, uint32_
         uint8_t new_type;
 
         if (src >= 0 && ra->high_low_container.keys[src] == key) {
+            ra_unshare_container_at_index(&ra->high_low_container, src);
             new_container = container_add_range(ra->high_low_container.containers[src],
                                                 ra->high_low_container.typecodes[src],
                                                 container_min, container_max, &new_type);
