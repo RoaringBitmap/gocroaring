@@ -121,4 +121,4 @@ https://groups.google.com/forum/#!forum/roaring-bitmaps
 
 ### Compatibility with Java RoaringBitmap library
 
-You can read bitmaps in Go, Java, C, C++ that have been serialized in Java, Java, C, C++.
+You can read bitmaps in Go, Java, C, C++ that have been serialized in Go, Java, C, C++.
