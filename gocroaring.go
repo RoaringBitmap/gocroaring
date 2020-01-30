@@ -103,6 +103,11 @@ func (rb *Bitmap) Cardinality() uint64 {
 	return uint64(C.roaring_bitmap_get_cardinality(rb.cpointer))
 }
 
+// Cardinality returns the number of integers contained in the bitmap
+func (rb *Bitmap) GetCardinality() uint64 {
+	return uint64(C.roaring_bitmap_get_cardinality(rb.cpointer))
+}
+
 // Maximum returns the largest of the integers contained in the bitmap assuming that it is not empty
 func (rb *Bitmap) Maximum() uint32 {
 	return uint32(C.roaring_bitmap_maximum(rb.cpointer))
