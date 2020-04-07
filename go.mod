@@ -1,4 +1,4 @@
-module github.com/RoaringBitmap/roaring
+module github.com/RoaringBitmap/gocroaring
 
 go 1.13
 
