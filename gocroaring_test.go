@@ -179,3 +179,19 @@ func TestStats(t *testing.T) {
 		}
 	}
 }
+
+func TestWriteFrozen(t *testing.T) {
+	rb := New()
+	rb.Add(1, 2, 3, 4, 6, 7)
+
+	// frozen serialization
+	buf := make([]byte, rb.FrozenSizeInBytes())
+	rb.WriteFrozen(buf) // we omit error handling
+
+	newrb, _ := ReadFrozenView(buf)
+	if rb.Equals(newrb) {
+		fmt.Println("I wrote the content to a byte stream in frozen format and read it back.")
+	} else {
+		t.Error("Bad read")
+	}
+}
