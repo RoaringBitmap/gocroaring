@@ -36,6 +36,7 @@ func New(x ...uint32) *Bitmap {
 	if len(x) > 0 {
 		ptr := unsafe.Pointer(&x[0])
 		answer = &Bitmap{C.roaring_bitmap_of_ptr(C.size_t(len(x)), (*C.uint32_t)(ptr))}
+		runtime.KeepAlive(x)
 	} else {
 		answer = &Bitmap{C.roaring_bitmap_create()}
 	}
@@ -56,6 +57,7 @@ func (rb *Bitmap) Add(x ...uint32) {
 	} else {
 		ptr := unsafe.Pointer(&x[0])
 		C.roaring_bitmap_add_many(rb.cpointer, C.size_t(len(x)), (*C.uint32_t)(ptr))
+		runtime.KeepAlive(x)
 	}
 
 }
@@ -80,6 +82,7 @@ func FastOr(bitmaps ...*Bitmap) *Bitmap {
 	}
 	b := &Bitmap{C.roaring_bitmap_or_many(C.size_t(number), (**C.struct_roaring_bitmap_s)(unsafe.Pointer(&po[0])))}
 	runtime.SetFinalizer(b, free)
+	runtime.KeepAlive(po)
 	return b
 }
 
@@ -309,6 +312,7 @@ func (rb *Bitmap) Write(b []byte) error {
 	}
 	bchar := (*C.char)(unsafe.Pointer(&b[0]))
 	C.roaring_bitmap_portable_serialize(rb.cpointer, bchar)
+	runtime.KeepAlive(b)
 	return nil
 }
 
@@ -326,6 +330,7 @@ func (rb *Bitmap) WriteFrozen(b []byte) error {
 func (rb *Bitmap) ToArray() []uint32 {
 	array := make([]uint32, rb.Cardinality())
 	C.roaring_bitmap_to_uint32_array(rb.cpointer, (*C.uint32_t)(unsafe.Pointer(&array[0])))
+	runtime.KeepAlive(array)
 	return array
 }
 
@@ -355,6 +360,7 @@ func (rb *Bitmap) String() string {
 func Read(b []byte) (*Bitmap, error) {
 	bchar := (*C.char)(unsafe.Pointer(&b[0]))
 	answer := &Bitmap{C.roaring_bitmap_portable_deserialize_safe(bchar, C.size_t(len(b)))}
+	runtime.KeepAlive(b)
 	if answer.cpointer == nil {
 		return nil, errors.New("failed to read roaring array")
 	}
