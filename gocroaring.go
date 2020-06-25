@@ -323,6 +323,7 @@ func (rb *Bitmap) WriteFrozen(b []byte) error {
 	}
 	bchar := (*C.char)(unsafe.Pointer(&b[0]))
 	C.roaring_bitmap_frozen_serialize(rb.cpointer, bchar)
+	runtime.KeepAlive(b)
 	return nil
 }
 
@@ -368,11 +369,12 @@ func Read(b []byte) (*Bitmap, error) {
 	return answer, nil
 }
 
-// ReadFrozen reads a frozen serialized verion of the bitmap
+// ReadFrozenView reads a frozen serialized version of the bitmap
 // this is immutable and attempting to mutate it will fail catastrophically
 func ReadFrozenView(b []byte) (*Bitmap, error) {
 	bchar := (*C.char)(unsafe.Pointer(&b[0]))
 	answer := &Bitmap{C.roaring_bitmap_frozen_view(bchar, C.size_t(len(b)))}
+	runtime.KeepAlive(b)
 	if answer.cpointer == nil {
 		return nil, errors.New("failed to read roaring array")
 	}
