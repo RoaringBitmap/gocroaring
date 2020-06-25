@@ -253,6 +253,11 @@ func (rb *Bitmap) SerializedSizeInBytes() int {
 	return int(C.roaring_bitmap_portable_size_in_bytes(rb.cpointer))
 }
 
+// FrozenSizeInBytes computes the frozen serialized size in bytes
+func (rb *Bitmap) FrozenSizeInBytes() int {
+	return int(C.roaring_bitmap_frozen_size_in_bytes(rb.cpointer))
+}
+
 // IntIterable allows you to iterate over the values in a Bitmap
 type IntIterable interface {
 	HasNext() bool
@@ -311,6 +316,17 @@ func (rb *Bitmap) Write(b []byte) error {
 	return nil
 }
 
+// WriteFrozen writes a serialized version of bitmap to the stream in the Frozen format
+func (rb *Bitmap) WriteFrozen(b []byte) error {
+	if len(b) < rb.FrozenSizeInBytes() {
+		return errors.New("not enough space")
+	}
+	bchar := (*C.char)(unsafe.Pointer(&b[0]))
+	C.roaring_bitmap_frozen_serialize(rb.cpointer, bchar)
+	runtime.KeepAlive(b)
+	return nil
+}
+
 // ToArray creates a new slice containing all of the integers stored in the Bitmap in sorted order
 func (rb *Bitmap) ToArray() []uint32 {
 	array := make([]uint32, rb.Cardinality())
@@ -345,6 +361,19 @@ func (rb *Bitmap) String() string {
 func Read(b []byte) (*Bitmap, error) {
 	bchar := (*C.char)(unsafe.Pointer(&b[0]))
 	answer := &Bitmap{C.roaring_bitmap_portable_deserialize_safe(bchar, C.size_t(len(b)))}
+	runtime.KeepAlive(b)
+	if answer.cpointer == nil {
+		return nil, errors.New("failed to read roaring array")
+	}
+	runtime.SetFinalizer(answer, free)
+	return answer, nil
+}
+
+// ReadFrozenView reads a frozen serialized version of the bitmap
+// this is immutable and attempting to mutate it will fail catastrophically
+func ReadFrozenView(b []byte) (*Bitmap, error) {
+	bchar := (*C.char)(unsafe.Pointer(&b[0]))
+	answer := &Bitmap{C.roaring_bitmap_frozen_view(bchar, C.size_t(len(b)))}
 	runtime.KeepAlive(b)
 	if answer.cpointer == nil {
 		return nil, errors.New("failed to read roaring array")
