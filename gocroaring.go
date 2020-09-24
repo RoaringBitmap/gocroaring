@@ -62,6 +62,16 @@ func (rb *Bitmap) Add(x ...uint32) {
 
 }
 
+// AddRange - add all values in range [min, max)
+func (rb *Bitmap) AddRange(min, max uint64) {
+	C.roaring_bitmap_add_range(rb.cpointer, C.uint64_t(min), C.uint64_t(max))
+}
+
+// RemoveRange - remove all values in range [min, max)
+func (rb *Bitmap) RemoveRange(min, max uint64) {
+	C.roaring_bitmap_remove_range(rb.cpointer, C.uint64_t(min), C.uint64_t(max))
+}
+
 // RunOptimize the compression of the bitmap (call this after populating a new bitmap), return true if the bitmap was modified
 func (rb *Bitmap) RunOptimize() bool {
 	return bool(C.roaring_bitmap_run_optimize(rb.cpointer))
