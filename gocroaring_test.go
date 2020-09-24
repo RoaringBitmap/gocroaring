@@ -34,6 +34,7 @@ func TestStressMemory(t *testing.T) {
 			r0.Add(j)
 		}
 		r0.RunOptimize() // improves compression
+		fmt.Println("size in bytes ", r0.SerializedSizeInBytes())
 		buf0 := make([]byte, r0.SerializedSizeInBytes())
 		r0.Write(buf0) // we omit error handling
 		PrintMemUsage()
