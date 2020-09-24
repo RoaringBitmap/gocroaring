@@ -34,11 +34,11 @@ func TestStressMemory(t *testing.T) {
 			r0.Add(j)
 		}
 		r0.RunOptimize() // improves compression
-		fmt.Println("size in bytes ", r0.SerializedSizeInBytes())
 		buf0 := make([]byte, r0.SerializedSizeInBytes())
 		r0.Write(buf0) // we omit error handling
 		PrintMemUsage()
 	}
+	fmt.Println("ok")
 }
 
 // go test -run MemoryUsage
@@ -178,8 +178,14 @@ func TestFancier(t *testing.T) {
 	fmt.Println(rb4)
 	// next we include an example of serialization
 	buf := make([]byte, rb1.SerializedSizeInBytes())
-	rb1.Write(buf) // we omit error handling
-	newrb, _ := Read(buf)
+	err := rb1.Write(buf)
+	if err != nil {
+		t.Error("Write failed", err)
+	}
+	newrb, err := Read(buf)
+	if err != nil {
+		t.Error("Read failed", err)
+	}
 	if rb1.Equals(newrb) {
 		fmt.Println("I wrote the content to a byte stream and read it back.")
 	} else {
@@ -220,18 +226,28 @@ func TestStats(t *testing.T) {
 }
 
 func TestWriteFrozen(t *testing.T) {
-	rb := New()
-	rb.Add(1, 2, 3, 4, 6, 7)
+	for i := 0; i < 10; i++ {
+		rb := New()
+		var j uint32
+		for k := 0; k < 10000000; k++ {
+			j = uint32(rand.Intn(10000000))
+			rb.Add(j)
+		}
 
-	// frozen serialization
-	buf := make([]byte, rb.FrozenSizeInBytes())
-	rb.WriteFrozen(buf) // we omit error handling
+		// frozen serialization
+		buf := make([]byte, rb.FrozenSizeInBytes())
+		rb.WriteFrozen(buf) // we omit error handling
 
-	newrb, _ := ReadFrozenView(buf)
-	if rb.Equals(newrb) {
-		fmt.Println("I wrote the content to a byte stream in frozen format and read it back.")
-	} else {
-		t.Error("Bad read")
+		newrb, err := ReadFrozenView(buf)
+		if err != nil {
+			t.Error("ReadFrozenView failed", err)
+		}
+		if rb.Equals(newrb) {
+			PrintMemUsage()
+		} else {
+			t.Error("Bad read")
+		}
+		runtime.KeepAlive(buf)
 	}
-	runtime.KeepAlive(buf)
+	fmt.Println("ok")
 }

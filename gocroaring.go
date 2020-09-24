@@ -40,6 +40,9 @@ func New(x ...uint32) *Bitmap {
 	} else {
 		answer = &Bitmap{C.roaring_bitmap_create()}
 	}
+	if answer.cpointer == nil {
+		panic("C code returned a null pointer.")
+	}
 	runtime.SetFinalizer(answer, free)
 	return answer
 }
@@ -100,6 +103,9 @@ func FastOr(bitmaps ...*Bitmap) *Bitmap {
 	b := &Bitmap{C.roaring_bitmap_or_many(C.size_t(number), (**C.struct_roaring_bitmap_s)(unsafe.Pointer(&po[0])))}
 	for _, v := range bitmaps {
 		runtime.KeepAlive(v)
+	}
+	if b.cpointer == nil {
+		panic("C code returned a null pointer.")
 	}
 	runtime.SetFinalizer(b, free)
 	runtime.KeepAlive(po)
@@ -195,6 +201,9 @@ func (rb *Bitmap) Equals(o interface{}) bool {
 func (rb *Bitmap) Clone() *Bitmap {
 	b := &Bitmap{C.roaring_bitmap_copy(rb.cpointer)}
 	runtime.KeepAlive(rb)
+	if b.cpointer == nil {
+		panic("C code returned a null pointer.")
+	}
 	runtime.SetFinalizer(b, free)
 	return b
 }
@@ -280,6 +289,9 @@ func Or(x1, x2 *Bitmap) *Bitmap {
 	b := &Bitmap{C.roaring_bitmap_or(x1.cpointer, x2.cpointer)}
 	runtime.KeepAlive(x1)
 	runtime.KeepAlive(x2)
+	if b.cpointer == nil {
+		panic("C code returned a null pointer.")
+	}
 	runtime.SetFinalizer(b, free)
 	return b
 }
@@ -289,6 +301,9 @@ func And(x1, x2 *Bitmap) *Bitmap {
 	b := &Bitmap{C.roaring_bitmap_and(x1.cpointer, x2.cpointer)}
 	runtime.KeepAlive(x1)
 	runtime.KeepAlive(x2)
+	if b.cpointer == nil {
+		panic("C code returned a null pointer.")
+	}
 	runtime.SetFinalizer(b, free)
 	return b
 }
@@ -298,6 +313,9 @@ func Xor(x1, x2 *Bitmap) *Bitmap {
 	b := &Bitmap{C.roaring_bitmap_xor(x1.cpointer, x2.cpointer)}
 	runtime.KeepAlive(x1)
 	runtime.KeepAlive(x2)
+	if b.cpointer == nil {
+		panic("C code returned a null pointer.")
+	}
 	runtime.SetFinalizer(b, free)
 	return b
 }
@@ -307,6 +325,9 @@ func AndNot(x1, x2 *Bitmap) *Bitmap {
 	b := &Bitmap{C.roaring_bitmap_andnot(x1.cpointer, x2.cpointer)}
 	runtime.KeepAlive(x1)
 	runtime.KeepAlive(x2)
+	if b.cpointer == nil {
+		panic("C code returned a null pointer.")
+	}
 	runtime.SetFinalizer(b, free)
 	return b
 }
@@ -320,6 +341,9 @@ func (rb *Bitmap) Flip(rangeStart, rangeEnd uint64) {
 // Flip negates the bits in the given range  (i.e., [rangeStart,rangeEnd)), any integer present in this range and in the bitmap is removed,
 func Flip(bm *Bitmap, rangeStart, rangeEnd uint64) *Bitmap {
 	b := &Bitmap{C.roaring_bitmap_flip(bm.cpointer, C.uint64_t(rangeStart), C.uint64_t(rangeEnd))}
+	if b.cpointer == nil {
+		panic("C code returned a null pointer.")
+	}
 	runtime.SetFinalizer(b, free)
 	runtime.KeepAlive(bm)
 	return b
@@ -386,6 +410,9 @@ func newIntIterator(a *Bitmap) *intIterator {
 		C.roaring_advance_uint32_iterator(p.pointertonext)
 	}
 	runtime.KeepAlive(a)
+	if p.pointertonext == nil {
+		panic("C code returned a null pointer.")
+	}
 	runtime.SetFinalizer(p, freeIntIterator)
 	return p
 }
@@ -458,10 +485,18 @@ func Read(b []byte) (*Bitmap, error) {
 
 // ReadFrozenView reads a frozen serialized version of the bitmap
 // this is immutable and attempting to mutate it will fail catastrophically
+// You must keep the byte buffer alive for the duration of the life of the
+// frozen bitmap (call runtime.KeepAlive(buf) after the last use of the
+// resulting bitmap):
+//
+// newrb, e := ReadFrozenView(buf)
+// do some work here
+// runtime.KeepAlive(buf) // important!!!
+//
 func ReadFrozenView(b []byte) (*Bitmap, error) {
 	bchar := (*C.char)(unsafe.Pointer(&b[0]))
 	answer := &Bitmap{C.roaring_bitmap_frozen_view(bchar, C.size_t(len(b)))}
-	runtime.KeepAlive(b)
+	// runtime.KeepAlive(b) // The caller better do it!!!
 	if answer.cpointer == nil {
 		return nil, errors.New("failed to read roaring array")
 	}
