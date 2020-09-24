@@ -1,5 +1,7 @@
 # gocroaring  [![Build Status](https://travis-ci.org/RoaringBitmap/gocroaring.png)](https://travis-ci.org/RoaringBitmap/gocroaring) [![GoDoc](https://godoc.org/github.com/RoaringBitmap/gocroaring?status.svg)](https://godoc.org/github.com/RoaringBitmap/gocroaring)
-Go wrapper for CRoaring (a C/C++ implementation at https://github.com/RoaringBitmap/CRoaring)
+![Tests (Ubuntu, macOS)](https://github.com/RoaringBitmap/gocroaring/workflows/Tests%20(Ubuntu,%20macOS)/badge.svg)
+
+Well-tested Go wrapper for [CRoaring](https://github.com/RoaringBitmap/CRoaring) (a C/C++ implementation of Roaring Bitmaps)
 
 Roaring bitmaps are used by several important systems:
 
