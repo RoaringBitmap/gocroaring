@@ -88,12 +88,50 @@ func TestAddMany(t *testing.T) {
 	rb1.Add(sl...)
 
 	if int(rb1.Cardinality()) != len(sl) {
-		t.Errorf("cardinality: expected %d, got %d", rb1.Cardinality(), len(sl))
+		t.Errorf("cardinality: expected %d, got %d", len(sl), rb1.Cardinality())
 	}
 	if rb1.Contains(5) {
 		t.Error("didn't expect to contain 5")
 	}
 	for _, v := range sl {
+		if !rb1.Contains(v) {
+			t.Errorf("expected to contain %d", v)
+		}
+	}
+}
+
+func TestAddRange(t *testing.T) {
+	rb1 := New()
+	rb1.AddRange(1, 5)
+
+	if int(rb1.Cardinality()) != 4 {
+		t.Errorf("cardinality: expected %d, got %d", 4, rb1.Cardinality())
+	}
+	if rb1.Contains(5) {
+		t.Error("didn't expect to contain 5")
+	}
+	for _, v := range []uint32{1, 2, 3, 4} {
+		if !rb1.Contains(v) {
+			t.Errorf("expected to contain %d", v)
+		}
+	}
+}
+
+func TestRemoveRange(t *testing.T) {
+	rb1 := New()
+	rb1.AddRange(1, 5)
+	rb1.RemoveRange(2, 4)
+
+	if int(rb1.Cardinality()) != 2 {
+		t.Errorf("cardinality: expected %d, got %d", 2, rb1.Cardinality())
+	}
+	if rb1.Contains(5) {
+		t.Error("didn't expect to contain 5")
+	}
+	if rb1.Contains(3) {
+		t.Error("didn't expect to contain 3")
+	}
+	for _, v := range []uint32{1, 4} {
 		if !rb1.Contains(v) {
 			t.Errorf("expected to contain %d", v)
 		}
