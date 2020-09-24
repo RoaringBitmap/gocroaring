@@ -31,6 +31,7 @@ type Bitmap struct {
 }
 
 // New creates a new Bitmap with any number of initial values.
+// This function may panic if the allocation failed.
 func New(x ...uint32) *Bitmap {
 	var answer *Bitmap
 	if len(x) > 0 {
@@ -94,6 +95,7 @@ func (rb *Bitmap) RemoveRunCompression() bool {
 
 // FastOr computes the union between many bitmaps quickly, as opposed to having to call Or repeatedly.
 // It might also be faster than calling Or repeatedly.
+// This function may panic if the allocation failed.
 func FastOr(bitmaps ...*Bitmap) *Bitmap {
 	number := len(bitmaps)
 	po := make([]*C.struct_roaring_bitmap_s, number)
@@ -198,6 +200,7 @@ func (rb *Bitmap) Equals(o interface{}) bool {
 }
 
 // Clone creates a copy of the Bitmap
+// This function may panic if the allocation failed.
 func (rb *Bitmap) Clone() *Bitmap {
 	b := &Bitmap{C.roaring_bitmap_copy(rb.cpointer)}
 	runtime.KeepAlive(rb)
@@ -285,6 +288,7 @@ func (rb *Bitmap) AndNotCardinality(x2 *Bitmap) uint64 {
 }
 
 // Or computes the union between two bitmaps and returns the result
+// This function may panic if the allocation failed.
 func Or(x1, x2 *Bitmap) *Bitmap {
 	b := &Bitmap{C.roaring_bitmap_or(x1.cpointer, x2.cpointer)}
 	runtime.KeepAlive(x1)
@@ -297,6 +301,7 @@ func Or(x1, x2 *Bitmap) *Bitmap {
 }
 
 // And computes the intersection between two bitmaps and returns the result
+// This function may panic if the allocation failed.
 func And(x1, x2 *Bitmap) *Bitmap {
 	b := &Bitmap{C.roaring_bitmap_and(x1.cpointer, x2.cpointer)}
 	runtime.KeepAlive(x1)
@@ -309,6 +314,7 @@ func And(x1, x2 *Bitmap) *Bitmap {
 }
 
 // Xor computes the symmetric difference between two bitmaps and returns the result
+// This function may panic if the allocation failed.
 func Xor(x1, x2 *Bitmap) *Bitmap {
 	b := &Bitmap{C.roaring_bitmap_xor(x1.cpointer, x2.cpointer)}
 	runtime.KeepAlive(x1)
@@ -321,6 +327,7 @@ func Xor(x1, x2 *Bitmap) *Bitmap {
 }
 
 // AndNot computes the difference between two bitmaps and returns the result
+// This function may panic if the allocation failed.
 func AndNot(x1, x2 *Bitmap) *Bitmap {
 	b := &Bitmap{C.roaring_bitmap_andnot(x1.cpointer, x2.cpointer)}
 	runtime.KeepAlive(x1)
@@ -332,13 +339,14 @@ func AndNot(x1, x2 *Bitmap) *Bitmap {
 	return b
 }
 
-// Flip negates the bits in the given range (i.e., [rangeStart,rangeEnd)), any integer present in this range and in the bitmap is removed,
+// Flip negates the bits in the given range (i.e., [rangeStart,rangeEnd)), any integer present in this range and in the bitmap is removed.
 func (rb *Bitmap) Flip(rangeStart, rangeEnd uint64) {
 	C.roaring_bitmap_flip_inplace(rb.cpointer, C.uint64_t(rangeStart), C.uint64_t(rangeEnd))
 	runtime.KeepAlive(rb)
 }
 
-// Flip negates the bits in the given range  (i.e., [rangeStart,rangeEnd)), any integer present in this range and in the bitmap is removed,
+// Flip negates the bits in the given range  (i.e., [rangeStart,rangeEnd)), any integer present in this range and in the bitmap is removed.
+// This function may panic if the allocation failed.
 func Flip(bm *Bitmap, rangeStart, rangeEnd uint64) *Bitmap {
 	b := &Bitmap{C.roaring_bitmap_flip(bm.cpointer, C.uint64_t(rangeStart), C.uint64_t(rangeEnd))}
 	if b.cpointer == nil {
@@ -401,6 +409,7 @@ func freeIntIterator(a *intIterator) {
 	runtime.KeepAlive(a)
 }
 
+// This function may panic if the allocation failed.
 func newIntIterator(a *Bitmap) *intIterator {
 	p := new(intIterator)
 	p.pointertonext = C.roaring_create_iterator(a.cpointer)
