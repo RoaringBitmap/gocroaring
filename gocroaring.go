@@ -534,3 +534,44 @@ func (rb *Bitmap) Stats() map[string]uint64 {
 		"n_values_bitset_containers": uint64(stat.n_values_bitset_containers),
 	}
 }
+
+type Statistics struct {
+	Cardinality uint64
+	Containers  uint64
+
+	ArrayContainers      uint64
+	ArrayContainerBytes  uint64
+	ArrayContainerValues uint64
+
+	BitmapContainers      uint64
+	BitmapContainerBytes  uint64
+	BitmapContainerValues uint64
+
+	RunContainers      uint64
+	RunContainerBytes  uint64
+	RunContainerValues uint64
+}
+
+// StatsStruct - same as Stats but returns typed struct. See https://github.com/RoaringBitmap/roaring/pull/73 for rationale
+func (rb *Bitmap) StatsStruct() Statistics {
+	var stat C.roaring_statistics_t
+	C.roaring_bitmap_statistics(rb.cpointer, &stat)
+	stats := Statistics{
+		Cardinality: uint64(stat.cardinality),
+		Containers:  uint64(stat.n_containers),
+
+		ArrayContainers:      uint64(stat.n_array_containers),
+		ArrayContainerBytes:  uint64(stat.n_bytes_array_containers),
+		ArrayContainerValues: uint64(stat.n_values_array_containers),
+
+		BitmapContainers:      uint64(stat.n_bitset_containers),
+		BitmapContainerBytes:  uint64(stat.n_bytes_bitset_containers),
+		BitmapContainerValues: uint64(stat.n_values_bitset_containers),
+
+		RunContainers:      uint64(stat.n_run_containers),
+		RunContainerBytes:  uint64(stat.n_bytes_run_containers),
+		RunContainerValues: uint64(stat.n_values_run_containers),
+	}
+
+	return stats
+}
