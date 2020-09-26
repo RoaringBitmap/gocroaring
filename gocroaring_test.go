@@ -2,10 +2,10 @@ package gocroaring
 
 import (
 	"fmt"
+	"math/rand"
+	"reflect"
 	"runtime"
 	"testing"
-
-	"math/rand"
 )
 
 func TestDisplayVersion(t *testing.T) {
@@ -232,4 +232,75 @@ func TestWriteFrozen(t *testing.T) {
 	} else {
 		t.Error("Bad read")
 	}
+}
+
+func TestStatsStruct(t *testing.T) {
+	t.Run("Test Stats with empty bitmap", func(t *testing.T) {
+		expectedStats := Statistics{}
+		rr := New()
+		if !reflect.DeepEqual(expectedStats, rr.StatsStruct()) {
+			t.Errorf("expected %#v, got %#v", expectedStats, rr.StatsStruct())
+		}
+	})
+
+	t.Run("Test Stats with Bitmap Container", func(t *testing.T) {
+		// Given a bitmap that should have a single bitmap container
+		expectedStats := Statistics{
+			Cardinality: 60000,
+			Containers:  1,
+
+			BitmapContainers:      1,
+			BitmapContainerValues: 60000,
+			BitmapContainerBytes:  8192,
+		}
+		rr := New()
+		for i := uint32(0); i < 60000; i++ {
+			rr.Add(i)
+		}
+		if !reflect.DeepEqual(expectedStats, rr.StatsStruct()) {
+			t.Errorf("expected %#v, got %#v", expectedStats, rr.StatsStruct())
+		}
+	})
+
+	t.Run("Test Stats with Array Container", func(t *testing.T) {
+		// Given a bitmap that should have a single array container
+		expectedStats := Statistics{
+			Cardinality: 2,
+			Containers:  1,
+
+			ArrayContainers:      1,
+			ArrayContainerValues: 2,
+			ArrayContainerBytes:  4,
+		}
+		rr := New()
+		rr.Add(2)
+		rr.Add(4)
+		if !reflect.DeepEqual(expectedStats, rr.StatsStruct()) {
+			t.Errorf("expected %#v, got %#v", expectedStats, rr.StatsStruct())
+		}
+	})
+
+	t.Run("no run containers", func(t *testing.T) {
+		rb := New()
+		rb.Add(1, 2, 3, 4, 6, 7)
+		rb.Add(999991, 999992, 999993, 999994, 999996, 999997)
+
+		stats := rb.StatsStruct()
+		if stats.Cardinality != rb.Cardinality() {
+			t.Errorf("cardinality: expected %d got %d\n", rb.Cardinality(), stats.Cardinality)
+		}
+
+		if stats.Containers != 2 {
+			t.Errorf("n_containers: expected %d got %d\n", 2, stats.Containers)
+		}
+		if stats.ArrayContainers != 2 {
+			t.Errorf("n_array_containers: expected %d got %d\n", 2, stats.ArrayContainers)
+		}
+		if stats.RunContainers != 0 {
+			t.Errorf("expected 0 got %d\n", stats.RunContainers)
+		}
+		if stats.BitmapContainers != 0 {
+			t.Errorf("expected 0 got %d\n", stats.BitmapContainers)
+		}
+	})
 }
