@@ -12,6 +12,7 @@ import "C"
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"runtime"
 	"strconv"
 	"unsafe"
@@ -50,9 +51,20 @@ func New(x ...uint32) *Bitmap {
 
 // Printf writes a description of the bitmap to stdout
 func (rb *Bitmap) Printf() {
-	C.roaring_bitmap_printf(rb.cpointer)
-	C.fflush(C.stdout)
-	runtime.KeepAlive(rb)
+	fmt.Print("{")
+	i := rb.Iterator()
+	counter := 30
+	for i.HasNext() {
+		counter = counter - 1
+		if counter == 0 {
+			fmt.Print("...")
+		}
+		fmt.Print(i.Next())
+		if i.HasNext() {
+			fmt.Print(",")
+		}
+	}
+	fmt.Print("}")
 }
 
 // Add the integer(s) x to the bitmap

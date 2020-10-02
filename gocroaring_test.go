@@ -63,6 +63,7 @@ func TestSimpleCard(t *testing.T) {
 		bitmap.Add(uint32(i))
 	}
 	c := bitmap.Cardinality()
+	bitmap.Printf()
 	fmt.Println("cardinality: ", c)
 	if c != 900 {
 		t.Error("Expected ", 900, ", got ", c)
