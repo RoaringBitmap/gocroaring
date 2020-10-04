@@ -16,3 +16,15 @@ jobs:
       uses: actions/checkout@v2
     - name: Test
       run: go test ./...
+
+  cross-compile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Install musl
+        run: sudo apt install -y musl-dev musl-tools
+      - name: Cross-Compile for musl
+        run: CC=musl-gcc go build .
