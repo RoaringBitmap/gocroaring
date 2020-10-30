@@ -223,6 +223,13 @@ func (rb *Bitmap) Clone() *Bitmap {
 	return b
 }
 
+// Assign let rb = x2
+func (rb *Bitmap) Assign(x2 *Bitmap) bool {
+	answer := bool(C.roaring_bitmap_overwrite(rb.cpointer, x2.cpointer))
+	runtime.KeepAlive(rb)
+	return answer
+}
+
 // And computes the intersection between two bitmaps and stores the result in the current bitmap
 func (rb *Bitmap) And(x2 *Bitmap) {
 	C.roaring_bitmap_and_inplace(rb.cpointer, x2.cpointer)
