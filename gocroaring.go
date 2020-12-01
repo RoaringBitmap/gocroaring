@@ -471,8 +471,11 @@ func (rb *Bitmap) WriteFrozen(b []byte) error {
 
 // ToArray creates a new slice containing all of the integers stored in the Bitmap in sorted order
 func (rb *Bitmap) ToArray() []uint32 {
-	array := make([]uint32, rb.Cardinality())
-	C.roaring_bitmap_to_uint32_array(rb.cpointer, (*C.uint32_t)(unsafe.Pointer(&array[0])))
+	card := rb.Cardinality()
+	array := make([]uint32, card)
+	if card > 0 {
+		C.roaring_bitmap_to_uint32_array(rb.cpointer, (*C.uint32_t)(unsafe.Pointer(&array[0])))
+	}
 	runtime.KeepAlive(rb)
 	return array
 }

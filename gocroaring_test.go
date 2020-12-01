@@ -200,6 +200,11 @@ func TestString(t *testing.T) {
 	if ans != "{1,2,3}" {
 		t.Errorf("bad string ")
 	}
+	ans = New().String()
+	fmt.Println(ans)
+	if ans != "{}" {
+		t.Errorf("bad string ")
+	}
 }
 
 func TestStats(t *testing.T) {
