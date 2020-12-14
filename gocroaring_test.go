@@ -328,3 +328,15 @@ func TestStatsStruct(t *testing.T) {
 		}
 	})
 }
+
+func TestAssign(t *testing.T) {
+	rb1 := New()
+	for i := 0; i < 1000000; i++ {
+		rb1.Add(uint32(i) * 10)
+	}
+	rb2 := New()
+	rb2.Assign(rb1)
+	if !rb1.Equals(rb2) {
+		t.Error("should equal")
+	}
+}
