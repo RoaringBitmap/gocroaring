@@ -200,6 +200,11 @@ func TestString(t *testing.T) {
 	if ans != "{1,2,3}" {
 		t.Errorf("bad string ")
 	}
+	ans = New().String()
+	fmt.Println(ans)
+	if ans != "{}" {
+		t.Errorf("bad string ")
+	}
 }
 
 func TestStats(t *testing.T) {
@@ -322,4 +327,16 @@ func TestStatsStruct(t *testing.T) {
 			t.Errorf("expected 0 got %d\n", stats.BitmapContainers)
 		}
 	})
+}
+
+func TestAssign(t *testing.T) {
+	rb1 := New()
+	for i := 0; i < 1000000; i++ {
+		rb1.Add(uint32(i) * 10)
+	}
+	rb2 := New()
+	rb2.Assign(rb1)
+	if !rb1.Equals(rb2) {
+		t.Error("should equal")
+	}
 }
