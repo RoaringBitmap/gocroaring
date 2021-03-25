@@ -31,6 +31,11 @@ type Bitmap struct {
 	cpointer *C.struct_roaring_bitmap_s
 }
 
+type frozenBitmap struct {
+	Bitmap
+	buffer *byte
+}
+
 // New creates a new Bitmap with any number of initial values.
 // This function may panic if the allocation failed.
 func New(x ...uint32) *Bitmap {
@@ -523,23 +528,20 @@ func Read(b []byte) (*Bitmap, error) {
 
 // ReadFrozenView reads a frozen serialized version of the bitmap
 // this is immutable and attempting to mutate it will fail catastrophically
-// You must keep the byte buffer alive for the duration of the life of the
-// frozen bitmap (call runtime.KeepAlive(buf) after the last use of the
-// resulting bitmap):
-//
-// newrb, e := ReadFrozenView(buf)
-// do some work here
-// runtime.KeepAlive(buf) // important!!!
+// It keeps a reference to the buffer internally to make sure it's alive for
+// the complete lifetime of the view
 //
 func ReadFrozenView(b []byte) (*Bitmap, error) {
 	bchar := (*C.char)(unsafe.Pointer(&b[0]))
-	answer := &Bitmap{C.roaring_bitmap_frozen_view(bchar, C.size_t(len(b)))}
-	// runtime.KeepAlive(b) // The caller better do it!!!
+	answer := &frozenBitmap{
+		Bitmap{C.roaring_bitmap_frozen_view(bchar, C.size_t(len(b)))},
+		&b[0],
+	}
 	if answer.cpointer == nil {
 		return nil, errors.New("failed to read roaring array")
 	}
-	runtime.SetFinalizer(answer, free)
-	return answer, nil
+	runtime.SetFinalizer(&answer.Bitmap, free)
+	return &answer.Bitmap, nil
 }
 
 // Stats returns some statistics about the roaring bitmap.

@@ -268,7 +268,6 @@ func TestWriteFrozen(t *testing.T) {
 		} else {
 			t.Error("Bad read")
 		}
-		runtime.KeepAlive(buf)
 	}
 	fmt.Println("ok")
 }
