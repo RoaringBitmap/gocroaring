@@ -140,6 +140,21 @@ func TestRemoveRange(t *testing.T) {
 	}
 }
 
+func TestContainsRange(t *testing.T) {
+	rb1 := New()
+	rb1.AddRange(1, 5)
+
+	if !rb1.ContainsRange(1, 5) {
+		t.Error("expected to contain [1, 5)")
+	}
+	if !rb1.ContainsRange(2, 5) {
+		t.Error("expected to contain [2, 5)")
+	}
+	if rb1.ContainsRange(1, 6) {
+		t.Error("didn't expect to contain [1, 6)")
+	}
+}
+
 func TestFancier(t *testing.T) {
 	rb1 := New()
 	rb1.Add(1)
