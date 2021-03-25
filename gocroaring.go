@@ -33,7 +33,7 @@ type Bitmap struct {
 
 type FrozenBitmap struct {
 	Bitmap
-	buffer []byte
+	buffer *[]byte
 }
 
 // New creates a new Bitmap with any number of initial values.
@@ -528,7 +528,7 @@ func ReadFrozenView(b []byte) (*Bitmap, error) {
 	bchar := (*C.char)(unsafe.Pointer(&b[0]))
 	answer := &FrozenBitmap{
 		Bitmap{C.roaring_bitmap_frozen_view(bchar, C.size_t(len(b)))},
-		b,
+		&b,
 	}
 	// runtime.KeepAlive(b) // The caller better do it!!!
 	if answer.cpointer == nil {
