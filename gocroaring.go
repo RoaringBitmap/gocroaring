@@ -530,7 +530,6 @@ func ReadFrozenView(b []byte) (*Bitmap, error) {
 		Bitmap{C.roaring_bitmap_frozen_view(bchar, C.size_t(len(b)))},
 		&b[0],
 	}
-	// runtime.KeepAlive(b) // The caller better do it!!!
 	if answer.cpointer == nil {
 		return nil, errors.New("failed to read roaring array")
 	}
