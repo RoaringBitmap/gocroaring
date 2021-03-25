@@ -133,6 +133,13 @@ func (rb *Bitmap) Contains(x uint32) bool {
 	return answer
 }
 
+// ContainsRange returns true if the integer range is contained in the bitmap
+func (rb *Bitmap) ContainsRange(x, y uint32) bool {
+	answer := bool(C.roaring_bitmap_contains_range(rb.cpointer, C.uint64_t(x), C.uint64_t(y)))
+	runtime.KeepAlive(rb)
+	return answer
+}
+
 // Clear removes all elements from the bitmap
 func (rb *Bitmap) Clear() {
 	C.roaring_bitmap_clear(rb.cpointer)
