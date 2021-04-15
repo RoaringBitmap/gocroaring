@@ -1,5 +1,5 @@
 // !!! DO NOT EDIT - THIS IS AN AUTO-GENERATED FILE !!!
-// Created by amalgamation.sh on Wed 14 Apr 2021 12:14:34 EDT
+// Created by amalgamation.sh on Thu 15 Apr 2021 11:00:31 EDT
 
 /*
  * Copyright 2016-2020 The CRoaring authors
@@ -18082,7 +18082,8 @@ void ra_init(roaring_array_t *new_ra) {
 bool ra_overwrite(const roaring_array_t *source, roaring_array_t *dest,
                   bool copy_on_write) {
     ra_clear_containers(dest);  // we are going to overwrite them
-    if (source->size == 0) {  // Note: can't call memcpy(NULL), even w/size 0
+    if (source->size == 0) {  // Note: can't call memcpy(NULL), even w/size
+        dest->size = 0; // <--- This is important.
         return true;  // output was just cleared, so they match
     }
     if (dest->allocation_size < source->size) {
