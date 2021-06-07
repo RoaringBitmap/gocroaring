@@ -120,9 +120,7 @@ func FastOr(bitmaps ...*Bitmap) *Bitmap {
 		po[i] = v.cpointer
 	}
 	b := &Bitmap{C.roaring_bitmap_or_many(C.size_t(number), (**C.struct_roaring_bitmap_s)(unsafe.Pointer(&po[0])))}
-	for _, v := range bitmaps {
-		runtime.KeepAlive(v)
-	}
+	runtime.KeepAlive(bitmaps)
 	if b.cpointer == nil {
 		panic("C code returned a null pointer.")
 	}
