@@ -54,6 +54,12 @@ func New(x ...uint32) *Bitmap {
 	return answer
 }
 
+func (rb *Bitmap) Free() {
+	// Clear the finalizer to avoid double frees
+	runtime.SetFinalizer(rb, nil)
+	free(rb)
+}
+
 // Printf writes a description of the bitmap to stdout
 func (rb *Bitmap) Printf() {
 	fmt.Print("{")

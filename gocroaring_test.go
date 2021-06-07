@@ -3,6 +3,7 @@ package gocroaring
 import (
 	"fmt"
 	"math/rand"
+	"os/exec"
 	"reflect"
 	"runtime"
 	"testing"
@@ -55,6 +56,14 @@ func TestMemoryUsage(t *testing.T) {
 		y := bitmap.Clone()
 		_ = y
 	}
+}
+
+func TestExplicitFree(t *testing.T) {
+	output, err := exec.Command("go", "run", "free_test/explicit_free.go").Output()
+	if err != nil {
+		t.Errorf("Command exited with error: %s", err)
+	}
+	fmt.Printf("TestExplicitFree output:\n%s\n", output)
 }
 
 func TestSimpleCard(t *testing.T) {
