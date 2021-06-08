@@ -43,7 +43,7 @@ func main() {
 		bitmaps[i] = bitmap.Clone()
 		bitmaps[i].Free()
 	}
-	fmt.Println("Copied then explicitly freed %d bitmaps... ")
+	fmt.Printf("Copied then explicitly freed %d bitmaps... ", N)
 	if err := syscall.Getrusage(syscall.RUSAGE_SELF, &rusage); err != nil {
 		fmt.Printf("Getrusage failed with error: %s\n", err)
 		os.Exit(1)
