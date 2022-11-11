@@ -4,7 +4,7 @@
 package gocroaring
 
 /*
-#cgo CFLAGS: -march=native -O3  -std=c99
+#cgo CFLAGS: -O3  -std=c99
 #include "roaring.h"
 
 */
