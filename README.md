@@ -1,4 +1,4 @@
-# gocroaring  [![Build Status](https://travis-ci.org/RoaringBitmap/gocroaring.png)](https://travis-ci.org/RoaringBitmap/gocroaring) [![GoDoc](https://godoc.org/github.com/RoaringBitmap/gocroaring?status.svg)](https://godoc.org/github.com/RoaringBitmap/gocroaring) ![Tests (Ubuntu, macOS)](https://github.com/RoaringBitmap/gocroaring/workflows/Tests%20(Ubuntu,%20macOS)/badge.svg)
+# gocroaring   [![GoDoc](https://godoc.org/github.com/RoaringBitmap/gocroaring?status.svg)](https://godoc.org/github.com/RoaringBitmap/gocroaring) ![Tests (Ubuntu, macOS)](https://github.com/RoaringBitmap/gocroaring/workflows/Tests%20(Ubuntu,%20macOS)/badge.svg)
 
 Well-tested Go wrapper for [CRoaring](https://github.com/RoaringBitmap/CRoaring) (a C/C++ implementation of Roaring Bitmaps)
 
