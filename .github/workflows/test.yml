@@ -4,16 +4,16 @@ jobs:
   test:
     strategy:
       matrix:
-        go-version: [1.14.x, 1.15.x]
+        go-version: [1.19.x, 1.20.x, 1.21.x, 1.22.x]
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
     - name: Install Go
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v4
       with:
         go-version: ${{ matrix.go-version }}
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
     - name: Test
       run: go test ./...
 
@@ -21,11 +21,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v4
         with:
-          go-version: 1.15.x
+          go-version: 1.22.x
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Install musl
         run: sudo apt install -y musl-dev musl-tools
       - name: Cross-Compile for musl
