@@ -4,7 +4,7 @@
 package gocroaring
 
 /*
-#cgo CFLAGS: -O3  -std=c99
+#cgo CFLAGS: -O3  -std=c11
 #include "roaring.h"
 
 */
@@ -434,24 +434,24 @@ func (ii *intIterator) Next() uint32 {
 	answer := ii.current
 	ii.has_next = bool(ii.pointertonext.has_value)
 	ii.current = uint32(ii.pointertonext.current_value)
-	C.roaring_advance_uint32_iterator(ii.pointertonext)
+	C.roaring_uint32_iterator_advance(ii.pointertonext)
 	runtime.KeepAlive(ii)
 	return answer
 }
 
 func freeIntIterator(a *intIterator) {
-	C.roaring_free_uint32_iterator(a.pointertonext)
+	C.roaring_uint32_iterator_free(a.pointertonext)
 	runtime.KeepAlive(a)
 }
 
 // This function may panic if the allocation failed.
 func newIntIterator(a *Bitmap) *intIterator {
 	p := new(intIterator)
-	p.pointertonext = C.roaring_create_iterator(a.cpointer)
+	p.pointertonext = C.roaring_iterator_create(a.cpointer)
 	p.has_next = bool(p.pointertonext.has_value)
 	p.current = uint32(p.pointertonext.current_value)
 	if p.has_next {
-		C.roaring_advance_uint32_iterator(p.pointertonext)
+		C.roaring_uint32_iterator_advance(p.pointertonext)
 	}
 	runtime.KeepAlive(a)
 	if p.pointertonext == nil {
@@ -534,7 +534,6 @@ func Read(b []byte) (*Bitmap, error) {
 // this is immutable and attempting to mutate it will fail catastrophically
 // It keeps a reference to the buffer internally to make sure it's alive for
 // the complete lifetime of the view
-//
 func ReadFrozenView(b []byte) (*Bitmap, error) {
 	bchar := (*C.char)(unsafe.Pointer(&b[0]))
 	answer := &frozenBitmap{
