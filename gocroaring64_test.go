@@ -590,3 +590,46 @@ func TestIterator64ReadRanges(t *testing.T) {
 		t.Error("expected zero ranges for an empty buffer")
 	}
 }
+
+func TestSelfAliasedOperations64(t *testing.T) {
+	fresh := func() *Bitmap64 { return New64(1, 2, big, big+1) }
+
+	rb := fresh()
+	rb.Xor(rb)
+	if !rb.IsEmpty() {
+		t.Errorf("x XOR x should be empty, got %v", rb.ToArray())
+	}
+
+	rb = fresh()
+	rb.AndNot(rb)
+	if !rb.IsEmpty() {
+		t.Errorf("x ANDNOT x should be empty, got %v", rb.ToArray())
+	}
+
+	rb = fresh()
+	rb.And(rb)
+	if !reflect.DeepEqual(rb.ToArray(), fresh().ToArray()) {
+		t.Errorf("x AND x should be x, got %v", rb.ToArray())
+	}
+
+	rb = fresh()
+	rb.Or(rb)
+	if !reflect.DeepEqual(rb.ToArray(), fresh().ToArray()) {
+		t.Errorf("x OR x should be x, got %v", rb.ToArray())
+	}
+
+	rb = fresh()
+	rb.Assign(rb)
+	if !reflect.DeepEqual(rb.ToArray(), fresh().ToArray()) {
+		t.Errorf("self-assignment should be a no-op, got %v", rb.ToArray())
+	}
+}
+
+func TestFromRange64Empty(t *testing.T) {
+	for _, c := range []struct{ min, max uint64 }{{5, 5}, {10, 3}, {big, big}} {
+		rb := FromRange64(c.min, c.max, 1)
+		if !rb.IsEmpty() {
+			t.Errorf("FromRange64(%d, %d, 1) should be empty, got %v", c.min, c.max, rb.ToArray())
+		}
+	}
+}

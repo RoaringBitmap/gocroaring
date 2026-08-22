@@ -314,11 +314,19 @@ func NewWithCapacity(capacity uint32) *Bitmap {
 }
 
 // FromRange creates a bitmap containing min, min+step, min+2*step... up to but
-// not including max. The step must be strictly positive.
+// not including max. An empty range yields an empty bitmap. The step must be
+// strictly positive.
 // This function may panic if the allocation failed.
 func FromRange(min, max uint64, step uint32) *Bitmap {
 	if step == 0 {
 		panic("gocroaring: FromRange requires a strictly positive step")
+	}
+	// C returns a null pointer for an empty range, which is not an error.
+	if max > 0x100000000 {
+		max = 0x100000000
+	}
+	if max <= min {
+		return New()
 	}
 	return wrap(C.roaring_bitmap_from_range(C.uint64_t(min), C.uint64_t(max), C.uint32_t(step)))
 }
@@ -333,6 +341,9 @@ func (rb *Bitmap) Clone() *Bitmap {
 
 // Assign copies x2 over rb, returning false if the copy failed.
 func (rb *Bitmap) Assign(x2 *Bitmap) bool {
+	if rb.aliases(x2) {
+		return true // already a copy of itself
+	}
 	answer := bool(C.roaring_bitmap_overwrite(rb.cpointer, x2.cpointer))
 	runtime.KeepAlive(rb)
 	runtime.KeepAlive(x2)
@@ -732,9 +743,19 @@ func (rb *Bitmap) SetCopyOnWrite(cow bool) {
 // In-place set operations
 ////////////////////////////////////////////////////////////////////////////////
 
+// aliases reports whether the two wrappers refer to the same C bitmap. Several
+// of the in-place C routines assert that their operands are distinct, so we
+// answer the aliased cases ourselves rather than let the C library abort.
+func (rb *Bitmap) aliases(x2 *Bitmap) bool {
+	return rb == x2 || rb.cpointer == x2.cpointer
+}
+
 // And computes the intersection between two bitmaps and stores the result in
 // the current bitmap.
 func (rb *Bitmap) And(x2 *Bitmap) {
+	if rb.aliases(x2) {
+		return // x AND x is x
+	}
 	C.roaring_bitmap_and_inplace(rb.cpointer, x2.cpointer)
 	runtime.KeepAlive(rb)
 	runtime.KeepAlive(x2)
@@ -743,6 +764,10 @@ func (rb *Bitmap) And(x2 *Bitmap) {
 // Xor computes the symmetric difference between two bitmaps and stores the
 // result in the current bitmap.
 func (rb *Bitmap) Xor(x2 *Bitmap) {
+	if rb.aliases(x2) {
+		rb.Clear() // x XOR x is empty
+		return
+	}
 	C.roaring_bitmap_xor_inplace(rb.cpointer, x2.cpointer)
 	runtime.KeepAlive(rb)
 	runtime.KeepAlive(x2)
@@ -751,6 +776,9 @@ func (rb *Bitmap) Xor(x2 *Bitmap) {
 // Or computes the union between two bitmaps and stores the result in the
 // current bitmap.
 func (rb *Bitmap) Or(x2 *Bitmap) {
+	if rb.aliases(x2) {
+		return // x OR x is x
+	}
 	C.roaring_bitmap_or_inplace(rb.cpointer, x2.cpointer)
 	runtime.KeepAlive(rb)
 	runtime.KeepAlive(x2)
@@ -759,6 +787,10 @@ func (rb *Bitmap) Or(x2 *Bitmap) {
 // AndNot computes the difference between two bitmaps and stores the result in
 // the current bitmap.
 func (rb *Bitmap) AndNot(x2 *Bitmap) {
+	if rb.aliases(x2) {
+		rb.Clear() // x ANDNOT x is empty
+		return
+	}
 	C.roaring_bitmap_andnot_inplace(rb.cpointer, x2.cpointer)
 	runtime.KeepAlive(rb)
 	runtime.KeepAlive(x2)
@@ -768,15 +800,21 @@ func (rb *Bitmap) AndNot(x2 *Bitmap) {
 // invalid state until RepairAfterLazy is called. Set bitsetconversion to true
 // to eagerly convert containers to bitsets when it might help.
 func (rb *Bitmap) LazyOrInplace(x2 *Bitmap, bitsetconversion bool) {
+	if rb.aliases(x2) {
+		return // x OR x is x
+	}
 	C.roaring_bitmap_lazy_or_inplace(rb.cpointer, x2.cpointer, C.bool(bitsetconversion))
 	runtime.KeepAlive(rb)
 	runtime.KeepAlive(x2)
 }
 
 // LazyXorInplace computes the symmetric difference with x2 in place, leaving
-// the bitmap in an invalid state until RepairAfterLazy is called. The two
-// bitmaps must be distinct.
+// the bitmap in an invalid state until RepairAfterLazy is called.
 func (rb *Bitmap) LazyXorInplace(x2 *Bitmap) {
+	if rb.aliases(x2) {
+		rb.Clear() // x XOR x is empty
+		return
+	}
 	C.roaring_bitmap_lazy_xor_inplace(rb.cpointer, x2.cpointer)
 	runtime.KeepAlive(rb)
 	runtime.KeepAlive(x2)

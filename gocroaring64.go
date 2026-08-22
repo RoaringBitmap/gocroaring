@@ -240,11 +240,16 @@ func New64(x ...uint64) *Bitmap64 {
 }
 
 // FromRange64 creates a bitmap containing min, min+step, min+2*step... up to
-// but not including max. The step must be strictly positive.
+// but not including max. An empty range yields an empty bitmap. The step must
+// be strictly positive.
 // This function may panic if the allocation failed.
 func FromRange64(min, max, step uint64) *Bitmap64 {
 	if step == 0 {
 		panic("gocroaring: FromRange64 requires a strictly positive step")
+	}
+	// C returns a null pointer for an empty range, which is not an error.
+	if max <= min {
+		return New64()
 	}
 	return wrap64(C.roaring64_bitmap_from_range(C.uint64_t(min), C.uint64_t(max), C.uint64_t(step)))
 }
@@ -252,6 +257,11 @@ func FromRange64(min, max, step uint64) *Bitmap64 {
 // MoveFrom32 builds a 64-bit bitmap by moving the containers out of a 32-bit
 // bitmap. This avoids copying the container data, but it leaves the source
 // bitmap empty.
+//
+// The containers are taken without regard for copy-on-write sharing, so do not
+// use it on a bitmap whose containers are shared with another one (that is, a
+// bitmap that has copy-on-write enabled and has been cloned). Clone first if
+// you need the source intact.
 // This function may panic if the allocation failed.
 func MoveFrom32(from *Bitmap) *Bitmap64 {
 	b := wrap64(C.roaring64_bitmap_move_from_roaring32(from.cpointer))
@@ -269,6 +279,9 @@ func (rb *Bitmap64) Clone() *Bitmap64 {
 
 // Assign copies x2 over rb.
 func (rb *Bitmap64) Assign(x2 *Bitmap64) {
+	if rb.aliases(x2) {
+		return // already a copy of itself
+	}
 	C.roaring64_bitmap_overwrite(rb.cpointer, x2.cpointer)
 	runtime.KeepAlive(rb)
 	runtime.KeepAlive(x2)
@@ -628,9 +641,19 @@ func (rb *Bitmap64) InternalValidate() error {
 // In-place set operations
 ////////////////////////////////////////////////////////////////////////////////
 
+// aliases reports whether the two wrappers refer to the same C bitmap. Several
+// of the in-place C routines assert that their operands are distinct, so we
+// answer the aliased cases ourselves rather than let the C library abort.
+func (rb *Bitmap64) aliases(x2 *Bitmap64) bool {
+	return rb == x2 || rb.cpointer == x2.cpointer
+}
+
 // And computes the intersection between two bitmaps and stores the result in
 // the current bitmap.
 func (rb *Bitmap64) And(x2 *Bitmap64) {
+	if rb.aliases(x2) {
+		return // x AND x is x
+	}
 	C.roaring64_bitmap_and_inplace(rb.cpointer, x2.cpointer)
 	runtime.KeepAlive(rb)
 	runtime.KeepAlive(x2)
@@ -639,6 +662,10 @@ func (rb *Bitmap64) And(x2 *Bitmap64) {
 // Xor computes the symmetric difference between two bitmaps and stores the
 // result in the current bitmap.
 func (rb *Bitmap64) Xor(x2 *Bitmap64) {
+	if rb.aliases(x2) {
+		rb.Clear() // x XOR x is empty
+		return
+	}
 	C.roaring64_bitmap_xor_inplace(rb.cpointer, x2.cpointer)
 	runtime.KeepAlive(rb)
 	runtime.KeepAlive(x2)
@@ -647,6 +674,9 @@ func (rb *Bitmap64) Xor(x2 *Bitmap64) {
 // Or computes the union between two bitmaps and stores the result in the
 // current bitmap.
 func (rb *Bitmap64) Or(x2 *Bitmap64) {
+	if rb.aliases(x2) {
+		return // x OR x is x
+	}
 	C.roaring64_bitmap_or_inplace(rb.cpointer, x2.cpointer)
 	runtime.KeepAlive(rb)
 	runtime.KeepAlive(x2)
@@ -655,6 +685,10 @@ func (rb *Bitmap64) Or(x2 *Bitmap64) {
 // AndNot computes the difference between two bitmaps and stores the result in
 // the current bitmap.
 func (rb *Bitmap64) AndNot(x2 *Bitmap64) {
+	if rb.aliases(x2) {
+		rb.Clear() // x ANDNOT x is empty
+		return
+	}
 	C.roaring64_bitmap_andnot_inplace(rb.cpointer, x2.cpointer)
 	runtime.KeepAlive(rb)
 	runtime.KeepAlive(x2)
@@ -905,8 +939,9 @@ func AlignedBuffer64(size int) []byte {
 // ReadFrozenView64 reads a frozen serialized version of the bitmap, as written
 // by Bitmap64.WriteFrozen. The result is immutable: attempting to mutate it
 // will fail catastrophically. The buffer must be aligned on a
-// Frozen64Alignment boundary (see AlignedBuffer64). A reference to the buffer
-// is retained for the lifetime of the view.
+// Frozen64Alignment boundary (see AlignedBuffer64) and its length must be
+// exactly the length that was written. A reference to the buffer is retained
+// for the lifetime of the view.
 func ReadFrozenView64(b []byte) (*Bitmap64, error) {
 	if len(b) == 0 {
 		return nil, ErrEmptyBuffer
