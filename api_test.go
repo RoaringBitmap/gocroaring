@@ -581,3 +581,68 @@ func TestIteratorReadRanges(t *testing.T) {
 		t.Error("expected zero ranges for an empty buffer")
 	}
 }
+
+// The in-place C routines assert that their operands are distinct; applying a
+// bitmap to itself used to abort the process.
+func TestSelfAliasedOperations(t *testing.T) {
+	fresh := func() *Bitmap { return New(1, 2, 3, 100000) }
+
+	rb := fresh()
+	rb.Xor(rb)
+	if !rb.IsEmpty() {
+		t.Errorf("x XOR x should be empty, got %v", rb.ToArray())
+	}
+
+	rb = fresh()
+	rb.AndNot(rb)
+	if !rb.IsEmpty() {
+		t.Errorf("x ANDNOT x should be empty, got %v", rb.ToArray())
+	}
+
+	rb = fresh()
+	rb.And(rb)
+	if !reflect.DeepEqual(rb.ToArray(), fresh().ToArray()) {
+		t.Errorf("x AND x should be x, got %v", rb.ToArray())
+	}
+
+	rb = fresh()
+	rb.Or(rb)
+	if !reflect.DeepEqual(rb.ToArray(), fresh().ToArray()) {
+		t.Errorf("x OR x should be x, got %v", rb.ToArray())
+	}
+
+	rb = fresh()
+	rb.LazyOrInplace(rb, false)
+	rb.RepairAfterLazy()
+	if !reflect.DeepEqual(rb.ToArray(), fresh().ToArray()) {
+		t.Errorf("lazy x OR x should be x, got %v", rb.ToArray())
+	}
+
+	rb = fresh()
+	rb.LazyXorInplace(rb)
+	rb.RepairAfterLazy()
+	if !rb.IsEmpty() {
+		t.Errorf("lazy x XOR x should be empty, got %v", rb.ToArray())
+	}
+
+	rb = fresh()
+	if !rb.Assign(rb) {
+		t.Error("self-assignment should succeed")
+	}
+	if !reflect.DeepEqual(rb.ToArray(), fresh().ToArray()) {
+		t.Errorf("self-assignment should be a no-op, got %v", rb.ToArray())
+	}
+}
+
+func TestFromRangeEmpty(t *testing.T) {
+	for _, c := range []struct{ min, max uint64 }{{5, 5}, {10, 3}, {0, 0}} {
+		rb := FromRange(c.min, c.max, 1)
+		if !rb.IsEmpty() {
+			t.Errorf("FromRange(%d, %d, 1) should be empty, got %v", c.min, c.max, rb.ToArray())
+		}
+	}
+	// The 32-bit range saturates at 2^32, so this is not an empty range.
+	if got := FromRange(0xFFFFFFFE, 1<<40, 1).Cardinality(); got != 2 {
+		t.Errorf("expected 2 values, got %d", got)
+	}
+}
