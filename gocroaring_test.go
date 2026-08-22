@@ -2,6 +2,7 @@ package gocroaring
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 	"os/exec"
 	"reflect"
@@ -264,8 +265,9 @@ func TestWriteFrozen(t *testing.T) {
 			rb.Add(j)
 		}
 
-		// frozen serialization
-		buf := make([]byte, rb.FrozenSizeInBytes())
+		// frozen serialization: the buffer backing a frozen view must be
+		// aligned, see AlignedBuffer.
+		buf := AlignedBuffer(rb.FrozenSizeInBytes())
 		rb.WriteFrozen(buf) // we omit error handling
 
 		newrb, err := ReadFrozenView(buf)
@@ -283,7 +285,7 @@ func TestWriteFrozen(t *testing.T) {
 
 func TestStatsStruct(t *testing.T) {
 	t.Run("Test Stats with empty bitmap", func(t *testing.T) {
-		expectedStats := Statistics{}
+		expectedStats := Statistics{MinValue: math.MaxUint32}
 		rr := New()
 		if !reflect.DeepEqual(expectedStats, rr.StatsStruct()) {
 			t.Errorf("expected %#v, got %#v", expectedStats, rr.StatsStruct())
@@ -299,6 +301,9 @@ func TestStatsStruct(t *testing.T) {
 			BitmapContainers:      1,
 			BitmapContainerValues: 60000,
 			BitmapContainerBytes:  8192,
+
+			MinValue: 0,
+			MaxValue: 59999,
 		}
 		rr := New()
 		for i := uint32(0); i < 60000; i++ {
@@ -318,6 +323,9 @@ func TestStatsStruct(t *testing.T) {
 			ArrayContainers:      1,
 			ArrayContainerValues: 2,
 			ArrayContainerBytes:  4,
+
+			MinValue: 2,
+			MaxValue: 4,
 		}
 		rr := New()
 		rr.Add(2)

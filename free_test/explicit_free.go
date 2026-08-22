@@ -31,7 +31,7 @@ func main() {
 
 	bitmap := gocroaring.New()
 	for i := uint32(0); i < M; i++ {
-		bitmap.Add(i*10)
+		bitmap.Add(i * 10)
 	}
 	fmt.Printf("Created reference bitmap... ")
 	if err := syscall.Getrusage(syscall.RUSAGE_SELF, &rusage); err != nil {
