@@ -1,4 +1,4 @@
-.PHONY: help all test format fmtcheck vet lint     qa deps clean nuke
+.PHONY: help all test format fmtcheck vet lint qa deps clean nuke
 
 
 
@@ -27,8 +27,8 @@ help:
 
 # Alias for help target
 all: help
-test: 
-	go test
+test:
+	go test ./...
 # Format the source code
 format:
 	@find ./ -type f -name "*.go" -exec gofmt -w {} \;
@@ -41,32 +41,30 @@ fmtcheck:
 
 # Check for syntax errors
 vet:
-	GOPATH=$(GOPATH) go vet ./...
+	go vet ./...
 
 # Check for style errors
 lint:
-	GOPATH=$(GOPATH) PATH=$(GOPATH)/bin:$(PATH) golint ./...
+	go vet ./...
 
 
 
 
 
 # Alias to run all quality-assurance checks
-qa: fmtcheck test vet lint    
+qa: fmtcheck test vet
 
 # --- INSTALL ---
 
 # Get the dependencies
 deps:
-	GOPATH=$(GOPATH) go get github.com/smartystreets/goconvey/convey
-	GOPATH=$(GOPATH) go get github.com/willf/bitset 
-	GOPATH=$(GOPATH) go get github.com/golang/lint/golint
+	go mod download
 
 # Remove any build artifact
 clean:
-	GOPATH=$(GOPATH) go clean ./...
+	go clean ./...
 
 # Deletes any intermediate file
 nuke:
 	rm -rf ./target
-	GOPATH=$(GOPATH) go clean -i ./...
+	go clean -i ./...

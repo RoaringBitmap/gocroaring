@@ -45,12 +45,50 @@ http://arxiv.org/abs/1402.6407 This paper used data from http://lemire.me/data/r
 
 
 
-### Dependencies
+### Requirements
 
-None in particular.
+Go 1.24 or better, and a C compiler (cgo). The CRoaring sources are bundled
+with the package, so there is nothing else to install:
 
-Naturally, you also need to grab the roaring code itself:
   - go get github.com/RoaringBitmap/gocroaring
+
+The bundled CRoaring version is reported by `gocroaring.CRoaringVersion`.
+
+### 32-bit and 64-bit bitmaps
+
+The package wraps both C APIs. `gocroaring.Bitmap` stores 32-bit integers and
+wraps `roaring_bitmap_t`; `gocroaring.Bitmap64` stores 64-bit integers and
+wraps `roaring64_bitmap_t`. The two types offer the same operations, with the
+free functions of the 64-bit type carrying a `64` suffix (`Or64`, `And64`,
+`Read64`, and so on).
+
+```go
+rb := gocroaring.New64()
+rb.AddRange(1<<40, 1<<40+1000)
+rb.RunOptimize()
+fmt.Println(rb.Cardinality(), rb.Contains(1<<40+5))
+```
+
+### Memory management
+
+Bitmaps and iterators hold memory allocated by C. That memory is released
+automatically once the Go value becomes unreachable: we register a cleanup with
+`runtime.AddCleanup` rather than a finalizer, which lets the garbage collector
+reclaim a bitmap in a single cycle instead of two, and makes creating and
+discarding bitmaps about 20% cheaper than the finalizer-based approach we used
+previously. You may still call `Free` to release the C memory eagerly; doing so
+cancels the cleanup, and calling `Free` twice is harmless.
+
+Iteration reads values from C in blocks rather than one at a time, so walking a
+bitmap through `Iterator()` is more than an order of magnitude faster than
+paying for a crossing of the Go/C boundary per value. Use `NewIterator()` when
+you need to move backwards or seek.
+
+The CRoaring entry points are declared `#cgo nocallback` (none of them calls
+back into Go) and, where the function does not keep the buffer it is given,
+`#cgo noescape` (so the Go buffers we hand to C are not forced onto the heap).
+The frozen views are deliberately left out of the `noescape` list, since they
+do retain their buffer.
 
 
 ### Example
