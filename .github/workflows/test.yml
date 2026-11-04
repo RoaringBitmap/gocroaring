@@ -16,6 +16,8 @@ jobs:
       uses: actions/checkout@v4
     - name: Test
       run: go test ./...
+    - name: Test with the read-only queries in C
+      run: go test -tags gocroaring_cqueries ./...
 
   cross-compile:
     runs-on: ubuntu-latest
@@ -30,3 +32,7 @@ jobs:
         run: sudo apt install -y musl-dev musl-tools
       - name: Cross-Compile for musl
         run: CC=musl-gcc go build .
+      - name: Install a riscv64 cross-compiler
+        run: sudo apt install -y gcc-riscv64-linux-gnu
+      - name: Cross-Compile for riscv64 (read-only queries in C)
+        run: CC=riscv64-linux-gnu-gcc GOARCH=riscv64 CGO_ENABLED=1 go vet . && CC=riscv64-linux-gnu-gcc GOARCH=riscv64 CGO_ENABLED=1 go test -c -o /dev/null .
