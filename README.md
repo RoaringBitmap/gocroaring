@@ -42,38 +42,42 @@ one is faster depends on how much work each call does:
   serialization), often by 2x to 10x. CRoaring uses SIMD instructions (AVX2,
   AVX-512, NEON) and allocates outside the Go heap.
 - roaring is faster on operations that do little work per call, such as adding
-  values one at a time or an intersection test that stops early. Each call
-  into gocroaring crosses the Go/C boundary, which costs about 40 ns. Batch
-  your calls (`Add(values...)`, `Iterator()`, `ToArray()`) to amortize it.
+  values one at a time. Each call into gocroaring crosses the Go/C boundary,
+  which costs about 40 ns. Batch your calls (`Add(values...)`, `Iterator()`,
+  `ToArray()`) to amortize it. To avoid that cost, gocroaring answers short
+  read-only queries (`Contains`, `Rank`, `Minimum`, `Maximum`, `Select`,
+  `Intersect`) in Go, reading the CRoaring data structures directly, on amd64
+  and arm64.
 
-The following timings come from `benchmarks/compare` and are medians of 10
+The following timings come from `benchmarks/compare` and are medians of 6
 runs on one core of a Xeon Gold 6548N (Linux, Go 1.26), comparing gocroaring
-1.1.0 (CRoaring 5.5.1) and roaring 2.30.0. Results of gocroaring operations
-are freed explicitly; roaring relies on the garbage collector, whose cost is
+(CRoaring 5.5.3) and roaring 2.30.0. Results of gocroaring operations are
+freed explicitly; roaring relies on the garbage collector, whose cost is
 included.
 
 | operation                                   | gocroaring | roaring | roaring time / gocroaring time |
 |---------------------------------------------|-----------:|--------:|------:|
-| Or of 200 sparse bitmaps (`FastOr`)          |    9.4 ms  | 92.5 ms |  9.8  |
-| Xor of two bitmaps made of runs              |   0.38 ms  |  4.4 ms | 11.6  |
-| Flip of a sparse bitmap                      |   0.28 ms  |  2.9 ms | 10.3  |
-| AndNot, small bitmap against a large one     |     84 µs  |  700 µs |  8.3  |
-| Or, small bitmap with a large one            |    195 µs  | 1.26 ms |  6.5  |
-| And of two sparse bitmaps                    |    541 µs  | 1.87 ms |  3.5  |
-| And of two 64-bit bitmaps                    |   0.40 ms  |  2.6 ms |  6.4  |
-| Deserialize (portable format)                |     19 µs  |   80 µs |  4.2  |
-| Serialize (portable format)                  |     52 µs  |  125 µs |  2.4  |
-| `ToArray` (1M values)                        |    660 µs  |  938 µs |  1.4  |
-| `Contains`                                   |     98 ns  |  117 ns |  1.2  |
-| Buffered iteration (1M values)               |    841 µs  |  894 µs |  1.1  |
-| `Intersects` that stops early (bitsets)      |     45 ns  |    5 ns |  0.11 |
-| `Add` one value at a time (50K sorted)       |   2.02 ms  |  309 µs |  0.15 |
-| `Add` one value at a time (50K random)       |   2.39 ms  |  956 µs |  0.40 |
-| Or of two very sparse 64-bit bitmaps         |    245 ms  |   85 ms |  0.35 |
+| `Intersects` that stops early (runs)         |    8.4 ns  |  369 ns | 44    |
+| Xor of two bitmaps made of runs              |   0.38 ms  | 4.25 ms | 11.1  |
+| AndNot, small bitmap against a large one     |     82 µs  |  897 µs | 10.9  |
+| Or of 200 sparse bitmaps (`FastOr`)          |    9.1 ms  | 89.5 ms |  9.9  |
+| Flip of a sparse bitmap                      |   0.28 ms  | 2.72 ms |  9.8  |
+| Or, small bitmap with a large one            |    194 µs  | 1.33 ms |  6.9  |
+| And of two 64-bit bitmaps                    |   0.40 ms  |  2.6 ms |  6.5  |
+| Deserialize (portable format)                |     19 µs  |   73 µs |  3.8  |
+| And of two sparse bitmaps                    |    531 µs  | 1.87 ms |  3.5  |
+| Serialize (portable format)                  |     47 µs  |  116 µs |  2.5  |
+| `Contains`                                   |     52 ns  |  112 ns |  2.2  |
+| `ToArray` (1M values)                        |    638 µs  |  936 µs |  1.5  |
+| Buffered iteration (1M values)               |    837 µs  |  962 µs |  1.15 |
+| `Intersects` that stops early (bitsets)      |    6.3 ns  |  5.2 ns |  0.83 |
+| `Add` one value at a time (50K random)       |   2.36 ms  |  864 µs |  0.37 |
+| Or of two very sparse 64-bit bitmaps         |    216 ms  |   61 ms |  0.28 |
+| `Add` one value at a time (50K sorted)       |   2.00 ms  |  305 µs |  0.15 |
 
-Over all 58 benchmarks in `benchmarks/compare`, gocroaring is faster in 44,
-roaring in 12, and they are within 5% of each other in 2; the geometric mean
-of the ratio is 1.7 in favor of gocroaring. Your results depend on your data
+Over all 58 benchmarks in `benchmarks/compare`, gocroaring is faster in 46,
+roaring in 11, and they are within 5% of each other in 1; the geometric mean
+of the ratio is 1.9 in favor of gocroaring. Your results depend on your data
 and hardware, so measure with your own workload. To run the comparison:
 
 ```
