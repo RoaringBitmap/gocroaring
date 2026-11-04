@@ -10,7 +10,7 @@ func TestVersion(t *testing.T) {
 	if CRoaringMajor < 5 {
 		t.Errorf("expected CRoaring 5 or better, got %d", CRoaringMajor)
 	}
-	expected := "5.5.1"
+	expected := "5.5.5"
 	if CRoaringVersion != expected {
 		t.Errorf("expected version %s, got %s", expected, CRoaringVersion)
 	}

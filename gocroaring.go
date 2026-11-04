@@ -508,6 +508,10 @@ func (rb *Bitmap) ContainsBulk(ctx *BulkContext, x uint32) bool {
 
 // Contains returns true if the integer is contained in the bitmap.
 func (rb *Bitmap) Contains(x uint32) bool {
+	return rb.contains(x)
+}
+
+func (rb *Bitmap) containsC(x uint32) bool {
 	answer := bool(C.roaring_bitmap_contains(rb.cpointer, C.uint32_t(x)))
 	runtime.KeepAlive(rb)
 	return answer
@@ -568,6 +572,10 @@ func (rb *Bitmap) IsEmpty() bool {
 // Maximum returns the largest of the integers contained in the bitmap,
 // or 0 if the bitmap is empty.
 func (rb *Bitmap) Maximum() uint32 {
+	return rb.maximum()
+}
+
+func (rb *Bitmap) maximumC() uint32 {
 	answer := uint32(C.roaring_bitmap_maximum(rb.cpointer))
 	runtime.KeepAlive(rb)
 	return answer
@@ -576,6 +584,10 @@ func (rb *Bitmap) Maximum() uint32 {
 // Minimum returns the smallest of the integers contained in the bitmap,
 // or math.MaxUint32 if the bitmap is empty.
 func (rb *Bitmap) Minimum() uint32 {
+	return rb.minimum()
+}
+
+func (rb *Bitmap) minimumC() uint32 {
 	answer := uint32(C.roaring_bitmap_minimum(rb.cpointer))
 	runtime.KeepAlive(rb)
 	return answer
@@ -583,6 +595,10 @@ func (rb *Bitmap) Minimum() uint32 {
 
 // Rank returns the number of values smaller or equal to x.
 func (rb *Bitmap) Rank(x uint32) uint64 {
+	return rb.rank(x)
+}
+
+func (rb *Bitmap) rankC(x uint32) uint64 {
 	answer := uint64(C.roaring_bitmap_rank(rb.cpointer, C.uint32_t(x)))
 	runtime.KeepAlive(rb)
 	return answer
@@ -616,13 +632,18 @@ func (rb *Bitmap) GetIndex(x uint32) int64 {
 
 // Select returns the element having the designated rank, if it exists.
 func (rb *Bitmap) Select(rank uint32) (uint32, error) {
-	var element C.uint32_t
-	exists := bool(C.roaring_bitmap_select(rb.cpointer, C.uint32_t(rank), &element))
-	runtime.KeepAlive(rb)
+	element, exists := rb.selectValue(rank)
 	if !exists {
 		return 0, ErrNoSuchElement
 	}
-	return uint32(element), nil
+	return element, nil
+}
+
+func (rb *Bitmap) selectC(rank uint32) (uint32, bool) {
+	var element C.uint32_t
+	exists := bool(C.roaring_bitmap_select(rb.cpointer, C.uint32_t(rank), &element))
+	runtime.KeepAlive(rb)
+	return uint32(element), exists
 }
 
 // Equals returns true if the two bitmaps contain the same integers.
@@ -656,6 +677,10 @@ func (rb *Bitmap) IsStrictSubset(x2 *Bitmap) bool {
 
 // Intersect checks whether the two bitmaps intersect.
 func (rb *Bitmap) Intersect(x2 *Bitmap) bool {
+	return rb.intersect(x2)
+}
+
+func (rb *Bitmap) intersectC(x2 *Bitmap) bool {
 	answer := bool(C.roaring_bitmap_intersect(rb.cpointer, x2.cpointer))
 	runtime.KeepAlive(rb)
 	runtime.KeepAlive(x2)
