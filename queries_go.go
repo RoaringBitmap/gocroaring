@@ -302,7 +302,7 @@ func containerRank(c unsafe.Pointer, t uint8, low uint16) int {
 // but C is faster per step on long ones: Rank and Select add up the
 // cardinalities of many containers, and Intersect may scan long arrays before
 // it can conclude. So Rank and Select visit at most goContainerBudget
-// containers in Go, and Intersect takes at most goIntersectBudget steps (a
+// containers in Go (Select only on bitmaps that have no more), and Intersect takes at most goIntersectBudget steps (a
 // step is a key skipped or a pair of values compared); beyond that, they
 // start over in C. The wasted work is bounded and small next to the cost of
 // the queries that exhaust the budget. (They are variables so that the tests
@@ -380,19 +380,14 @@ func containerSelect(c unsafe.Pointer, t uint8, r int) uint32 {
 
 func (rb *Bitmap) selectValue(rank uint32) (uint32, bool) {
 	v := viewOf(rb)
+	// CRoaring (since 5.5.2) skips containers by cardinality quickly, so
+	// Select stays in Go only for bitmaps with few containers.
+	if v.n > goContainerBudget {
+		return rb.selectC(rank)
+	}
 	r := int(rank)
-	budget := goContainerBudget
 	for i := 0; i < v.n; i++ {
 		c, t := v.container(i)
-		// Summing the runs of a run container costs about as much as
-		// visiting a container per 8 runs.
-		if budget--; t == goRunType {
-			_, n := runsOf(c)
-			budget -= n / 8
-		}
-		if budget < 0 {
-			return rb.selectC(rank)
-		}
 		card := cardinality(c, t)
 		if card < 0 {
 			return rb.selectC(rank)
