@@ -1,5 +1,5 @@
 // !!! DO NOT EDIT - THIS IS AN AUTO-GENERATED FILE !!!
-// Created by amalgamation.sh on 2026-11-04T04:16:04Z
+// Created by amalgamation.sh on 2026-11-04T13:35:46Z
 
 /*
  * The CRoaring project is under a dual license (Apache/MIT).
@@ -9141,36 +9141,75 @@ bool bitset_container_is_subset(const bitset_container_t *container1,
 	return true;
 }
 
+// Returns the position of the set bit of rank r (0-based) in w. Requires
+// r < roaring_hamming(w). Narrowing with popcounts compiles to conditional
+// moves, avoiding a mispredicted exit from a bit-by-bit loop.
+static inline uint32_t bitset_select_in_word(uint64_t w, uint32_t r) {
+    uint32_t pos = 0;
+    uint32_t c = roaring_hamming(w & 0xFFFFFFFF);
+    if (r >= c) {
+        r -= c;
+        w >>= 32;
+        pos += 32;
+    }
+    c = roaring_hamming(w & 0xFFFF);
+    if (r >= c) {
+        r -= c;
+        w >>= 16;
+        pos += 16;
+    }
+    c = roaring_hamming(w & 0xFF);
+    if (r >= c) {
+        r -= c;
+        w >>= 8;
+        pos += 8;
+    }
+    for (; r > 0; r--) {
+        w &= w - 1;
+    }
+    return pos + roaring_trailing_zeroes(w);
+}
+
 CROARING_ALLOW_UNALIGNED
-bool bitset_container_select(const bitset_container_t *container, uint32_t *start_rank, uint32_t rank, uint32_t *element) {
+bool bitset_container_select(const bitset_container_t *container,
+                             uint32_t *start_rank, uint32_t rank,
+                             uint32_t *element) {
     int card = bitset_container_cardinality(container);
-    if(rank >= *start_rank + card) {
+    if (rank >= *start_rank + card) {
         *start_rank += card;
         return false;
     }
     const uint64_t *words = container->words;
-    int32_t size;
-    for (int i = 0; i < BITSET_CONTAINER_SIZE_IN_WORDS; i += 1) {
-        size = roaring_hamming(words[i]);
-        if(rank <= *start_rank + size) {
-            uint64_t w = container->words[i];
-            uint16_t base = i*64;
-            while (w != 0) {
-                uint64_t t = w & (~w + 1);
-                int r = roaring_trailing_zeroes(w);
-                if(*start_rank == rank) {
-                    *element = r+base;
-                    return true;
-                }
-                w ^= t;
-                *start_rank += 1;
-            }
+    uint32_t r = rank - *start_rank;
+    int32_t i = 0;
+    // Independent popcounts over blocks of words pipeline well, and the
+    // per-block branch is taken far less often than a per-word branch.
+    for (; i + 8 <= BITSET_CONTAINER_SIZE_IN_WORDS; i += 8) {
+        uint32_t c = roaring_hamming(words[i]) + roaring_hamming(words[i + 1]) +
+                     roaring_hamming(words[i + 2]) +
+                     roaring_hamming(words[i + 3]) +
+                     roaring_hamming(words[i + 4]) +
+                     roaring_hamming(words[i + 5]) +
+                     roaring_hamming(words[i + 6]) +
+                     roaring_hamming(words[i + 7]);
+        if (r < c) {
+            break;
         }
-        else
-            *start_rank += size;
+        r -= c;
     }
+    for (; i < BITSET_CONTAINER_SIZE_IN_WORDS; i++) {
+        uint32_t c = roaring_hamming(words[i]);
+        if (r < c) {
+            *element = (uint32_t)i * 64 + bitset_select_in_word(words[i], r);
+            *start_rank = rank;
+            return true;
+        }
+        r -= c;
+    }
+    // Only reachable if the stored cardinality is inconsistent.
     assert(false);
-    roaring_unreachable;
+    *start_rank += card;
+    return false;
 }
 
 
@@ -18614,6 +18653,7 @@ bool roaring_bitmap_to_bitset(const roaring_bitmap_t *r, bitset_t *bitset) {
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
 
@@ -18640,7 +18680,16 @@ namespace api {
 typedef struct roaring64_bitmap_s {
     art_t art;
     uint8_t flags;
+    // The container slots. Every slot at or above end is free; the free slots
+    // below end (the holes) are kept in a min-heap, so that the lowest free
+    // slot, first_free, is found without scanning the slots. first_free is
+    // the top of the heap, or end if there are no holes (capacity if the
+    // slots are all taken).
     uint64_t first_free;
+    uint64_t end;
+    uint64_t *holes;  // min-heap of num_holes indices
+    uint64_t num_holes;
+    uint64_t holes_capacity;
     uint64_t capacity;
     container_t **containers;
     // Parallel to containers[]. Live slots (non-NULL pointers) have the
@@ -18823,21 +18872,67 @@ static void reserve_containers(roaring64_bitmap_t *r, uint64_t num_containers) {
     grow_containers_to(r, num_containers);
 }
 
-static uint64_t next_free_container_idx(const roaring64_bitmap_t *r) {
-    for (uint64_t i = r->first_free + 1; i < r->capacity; ++i) {
-        if (r->containers[i] == NULL) {
-            return i;
-        }
+// The heap of holes: holes[0] is the smallest index, and every index is
+// smaller than its children, holes[2i+1] and holes[2i+2].
+static void holes_push(roaring64_bitmap_t *r, uint64_t index) {
+    if (r->num_holes == r->holes_capacity) {
+        uint64_t new_capacity =
+            r->holes_capacity < 16 ? 16 : 2 * r->holes_capacity;
+        r->holes = (uint64_t *)roaring_realloc(r->holes,
+                                               new_capacity * sizeof(uint64_t));
+        r->holes_capacity = new_capacity;
     }
-    return r->capacity;
+    uint64_t i = r->num_holes++;
+    while (i > 0) {
+        uint64_t parent = (i - 1) / 2;
+        if (r->holes[parent] <= index) {
+            break;
+        }
+        r->holes[i] = r->holes[parent];
+        i = parent;
+    }
+    r->holes[i] = index;
 }
 
+static void holes_pop(roaring64_bitmap_t *r) {
+    uint64_t last = r->holes[--r->num_holes];
+    uint64_t n = r->num_holes;
+    uint64_t i = 0;
+    while (2 * i + 1 < n) {
+        uint64_t child = 2 * i + 1;
+        if (child + 1 < n && r->holes[child + 1] < r->holes[child]) {
+            child++;
+        }
+        if (last <= r->holes[child]) {
+            break;
+        }
+        r->holes[i] = r->holes[child];
+        i = child;
+    }
+    if (n > 0) {
+        r->holes[i] = last;
+    }
+}
+
+// Forgets every hole (the slots below end are then all taken).
+static void holes_clear(roaring64_bitmap_t *r) { r->num_holes = 0; }
+
+static inline void update_first_free(roaring64_bitmap_t *r) {
+    r->first_free = r->num_holes > 0 ? r->holes[0] : r->end;
+}
+
+// Takes the lowest free slot and returns its index. The caller fills it.
 static uint64_t allocate_index(roaring64_bitmap_t *r) {
     uint64_t first_free = r->first_free;
     if (first_free == r->capacity) {
         extend_containers(r);
     }
-    r->first_free = next_free_container_idx(r);
+    if (r->num_holes > 0) {
+        holes_pop(r);  // first_free is the top of the heap
+    } else {
+        r->end = first_free + 1;  // first_free == end
+    }
+    update_first_free(r);
     return first_free;
 }
 
@@ -18879,12 +18974,20 @@ static void ensure_container_capacity(roaring64_bitmap_t *r, uint64_t extra) {
     r->capacity = new_capacity;
 }
 
-static void remove_container(roaring64_bitmap_t *r, leaf_t leaf) {
-    uint64_t index = get_index(leaf);
+// Frees a slot (it does not free the container in it).
+static void free_index(roaring64_bitmap_t *r, uint64_t index) {
     r->containers[index] = NULL;
-    if (index < r->first_free) {
-        r->first_free = index;
+    if (index + 1 == r->end) {
+        // The holes, all below index, stay below end.
+        r->end = index;
+    } else {
+        holes_push(r, index);
     }
+    update_first_free(r);
+}
+
+static void remove_container(roaring64_bitmap_t *r, leaf_t leaf) {
+    free_index(r, get_index(leaf));
 }
 
 // Copies the container referenced by `leaf` from `r1` to `r2`.
@@ -18984,6 +19087,10 @@ roaring64_bitmap_t *roaring64_bitmap_create(void) {
     r->flags = 0;
     r->capacity = 0;
     r->first_free = 0;
+    r->end = 0;
+    r->holes = NULL;
+    r->num_holes = 0;
+    r->holes_capacity = 0;
     r->containers = NULL;
     r->typecodes = NULL;
     return r;
@@ -19011,6 +19118,7 @@ void roaring64_bitmap_free(roaring64_bitmap_t *r) {
     art_free(&r->art);
     roaring_free(r->containers);
     roaring_free(r->typecodes);
+    roaring_free(r->holes);
     roaring_free(r);
 }
 
@@ -19051,6 +19159,8 @@ void roaring64_bitmap_overwrite(roaring64_bitmap_t *dest,
     art_init_cleared(&dest->art);
     dest->flags = 0;
     dest->first_free = 0;
+    dest->end = 0;
+    holes_clear(dest);
     if (dest->capacity > 0) {
         memset(dest->containers, 0,
                sizeof(dest->containers[0]) * dest->capacity);
@@ -19794,10 +19904,11 @@ static void move_to_shrink(roaring64_bitmap_t *r, leaf_t *leaf) {
         return;
     }
     uint8_t typecode = get_typecode(*leaf);
-    set_container_at(r, r->first_free, get_container(r, *leaf), typecode);
-    r->containers[idx] = NULL;
-    *leaf = create_leaf(r->first_free, typecode);
-    r->first_free = next_free_container_idx(r);
+    container_t *c = get_container(r, *leaf);
+    uint64_t new_idx = allocate_index(r);
+    set_container_at(r, new_idx, c, typecode);
+    free_index(r, idx);
+    *leaf = create_leaf(new_idx, typecode);
 }
 
 static inline bool is_shrunken(const roaring64_bitmap_t *r) {
@@ -19813,6 +19924,16 @@ size_t roaring64_bitmap_shrink_to_fit(roaring64_bitmap_t *r) {
                                          get_typecode(*leaf));
         move_to_shrink(r, leaf);
         art_iterator_next(&it);
+    }
+    // Every container now sits below first_free, and every slot below it is
+    // taken.
+    r->end = r->first_free;
+    holes_clear(r);
+    if (r->holes != NULL) {
+        freed += r->holes_capacity * sizeof(uint64_t);
+        roaring_free(r->holes);
+        r->holes = NULL;
+        r->holes_capacity = 0;
     }
     if (is_shrunken(r)) {
         return freed;
@@ -19893,8 +20014,80 @@ static bool roaring64_leaf_internal_validate(const art_val_t val,
     return container_internal_validate(r->containers[index], typecode, reason);
 }
 
+static int compare_uint64(const void *a, const void *b) {
+    uint64_t x = *(const uint64_t *)a, y = *(const uint64_t *)b;
+    return (x > y) - (x < y);
+}
+
+// Checks the bookkeeping of the container slots (see roaring64_bitmap_s).
+static bool roaring64_slots_internal_validate(const roaring64_bitmap_t *r,
+                                              const char **reason) {
+    if (r->flags & ROARING_FLAG_FROZEN) {
+        return true;  // read-only: every slot is marked as taken
+    }
+    if (r->end > r->capacity) {
+        *reason = "container slots end beyond capacity";
+        return false;
+    }
+    uint64_t free_below_end = 0;
+    for (uint64_t i = 0; i < r->capacity; ++i) {
+        if (r->containers[i] == NULL) {
+            free_below_end += i < r->end;
+        } else if (i >= r->end) {
+            *reason = "container slot in use at or above end";
+            return false;
+        }
+    }
+    if (free_below_end != r->num_holes) {
+        *reason = "wrong count of free container slots";
+        return false;
+    }
+    // Each hole must be a distinct free slot below end: since there are as
+    // many holes as free slots below end, they are then exactly those slots.
+    uint64_t lowest = r->end;
+    if (r->num_holes > 0) {
+        uint64_t *sorted =
+            (uint64_t *)roaring_malloc(r->num_holes * sizeof(uint64_t));
+        if (sorted == NULL) {
+            *reason = "out of memory";
+            return false;
+        }
+        memcpy(sorted, r->holes, r->num_holes * sizeof(uint64_t));
+        qsort(sorted, r->num_holes, sizeof(uint64_t), compare_uint64);
+        bool ok = true;
+        for (uint64_t i = 0; i < r->num_holes && ok; ++i) {
+            ok = sorted[i] < r->end && r->containers[sorted[i]] == NULL &&
+                 (i == 0 || sorted[i - 1] < sorted[i]);
+        }
+        roaring_free(sorted);
+        if (!ok) {
+            *reason = "container slot hole list is wrong";
+            return false;
+        }
+        for (uint64_t i = 1; i < r->num_holes; ++i) {
+            if (r->holes[(i - 1) / 2] > r->holes[i]) {
+                *reason = "container slot holes are not a heap";
+                return false;
+            }
+        }
+        lowest = r->holes[0];
+    }
+    if (lowest != r->first_free) {
+        *reason = "first_free is not the lowest free container slot";
+        return false;
+    }
+    return true;
+}
+
 bool roaring64_bitmap_internal_validate(const roaring64_bitmap_t *r,
                                         const char **reason) {
+    const char *reason_local;
+    if (reason == NULL) {
+        reason = &reason_local;
+    }
+    if (!roaring64_slots_internal_validate(r, reason)) {
+        return false;
+    }
     return art_internal_validate(&r->art, reason,
                                  roaring64_leaf_internal_validate, (void *)r);
 }
@@ -21346,6 +21539,10 @@ static roaring64_bitmap_t *alloc_frozen_bitmap(
     r->flags = ROARING_FLAG_FROZEN;
     r->capacity = capacity;
     r->first_free = 0;
+    r->end = 0;
+    r->holes = NULL;
+    r->num_holes = 0;
+    r->holes_capacity = 0;
     cursor = roaring64_arena_pad(cursor, base, alignof(container_t *));
     if (capacity == 0) {
         r->containers = NULL;
@@ -21525,7 +21722,9 @@ roaring64_bitmap_t *roaring64_bitmap_frozen_view(const char *buf,
     // Padding to make overall size a multiple of required alignment.
     buf = CROARING_ALIGN_BUF(buf, CROARING_BITSET_ALIGNMENT);
 
+    // A frozen view is read-only: mark every slot as taken.
     r->first_free = r->capacity;
+    r->end = r->capacity;
     return r;
 }
 
@@ -21830,11 +22029,111 @@ bool roaring64_bitmap_iterate(const roaring64_bitmap_t *r,
     return true;
 }
 
-void roaring64_bitmap_to_uint64_array(const roaring64_bitmap_t *r,
-                                      uint64_t *out) {
+// Whether bitset_container_to_uint32_array picks a vectorized decoder for
+// `bc` (keep in sync with it). Only then does decoding to 32 bits and widening
+// beat decoding directly to 64 bits.
+static inline bool roaring64_bitset_decodes_vectorized(
+    const bitset_container_t *bc) {
+#if CROARING_IS_X64
+    int support = croaring_hardware_support();
+#if CROARING_COMPILER_SUPPORTS_AVX512
+    if (support & ROARING_SUPPORTS_AVX512) {
+        return true;
+    }
+#endif
+    return (support & ROARING_SUPPORTS_AVX2) && bc->cardinality >= 8192;
+#else
+    (void)bc;
+    return false;
+#endif
+}
+
+// The containers of a portable frozen view may be unaligned: see
+// roaring64_bitmap_portable_deserialize_frozen.
+CROARING_ALLOW_UNALIGNED
+static uint64_t *roaring64_bitset_to_uint64_array(const bitset_container_t *bc,
+                                                  uint64_t high48,
+                                                  uint64_t *out) {
+    for (int32_t i = 0; i < BITSET_CONTAINER_SIZE_IN_WORDS; ++i) {
+        uint64_t w = bc->words[i];
+        uint64_t base = high48 + (uint64_t)i * 64;
+        while (w != 0) {
+            *out++ = base + roaring_trailing_zeroes(w);
+            w &= w - 1;
+        }
+    }
+    return out;
+}
+
+static void roaring64_bitmap_to_uint64_array_iterator(
+    const roaring64_bitmap_t *r, uint64_t *out) {
     roaring64_iterator_t it;  // gets initialized in the next line
     roaring64_iterator_init_at(r, &it, /*first=*/true);
     roaring64_iterator_read(&it, out, UINT64_MAX);
+}
+
+CROARING_ALLOW_UNALIGNED
+void roaring64_bitmap_to_uint64_array(const roaring64_bitmap_t *r,
+                                      uint64_t *out) {
+    // Where vectorized 32-bit bitset decoders are available, decoding into a
+    // scratch buffer and widening is several times faster than decoding value
+    // by value.
+    uint64_t *const start = out;
+    uint32_t *scratch = NULL;
+    art_iterator_t it = art_init_iterator((art_t *)&r->art, /*first=*/true);
+    while (it.value != NULL) {
+        leaf_t leaf = (leaf_t)*it.value;
+        uint64_t high48 = combine_key(it.key, 0);
+        uint8_t typecode = get_typecode(leaf);
+        const container_t *c =
+            container_unwrap_shared(get_container(r, leaf), &typecode);
+        switch (typecode) {
+            case BITSET_CONTAINER_TYPE: {
+                const bitset_container_t *bc = const_CAST_bitset(c);
+                if (!roaring64_bitset_decodes_vectorized(bc)) {
+                    out = roaring64_bitset_to_uint64_array(bc, high48, out);
+                    break;
+                }
+                if (scratch == NULL) {
+                    scratch = (uint32_t *)roaring_malloc((1 << 16) *
+                                                         sizeof(uint32_t));
+                    if (scratch == NULL) {
+                        roaring64_bitmap_to_uint64_array_iterator(r, start);
+                        return;
+                    }
+                }
+                int n = bitset_container_to_uint32_array(scratch, bc, 0);
+                for (int i = 0; i < n; ++i) {
+                    out[i] = high48 | scratch[i];
+                }
+                out += n;
+                break;
+            }
+            case ARRAY_CONTAINER_TYPE: {
+                const array_container_t *ac = const_CAST_array(c);
+                for (int32_t i = 0; i < ac->cardinality; ++i) {
+                    out[i] = high48 | ac->array[i];
+                }
+                out += ac->cardinality;
+                break;
+            }
+            case RUN_CONTAINER_TYPE: {
+                const run_container_t *rc = const_CAST_run(c);
+                for (int32_t i = 0; i < rc->n_runs; ++i) {
+                    uint64_t value = high48 | rc->runs[i].value;
+                    for (uint32_t j = 0; j <= rc->runs[i].length; ++j) {
+                        *out++ = value + j;
+                    }
+                }
+                break;
+            }
+            default:
+                assert(false);
+                roaring_unreachable;
+        }
+        art_iterator_next(&it);
+    }
+    roaring_free(scratch);
 }
 
 roaring64_iterator_t *roaring64_iterator_create(const roaring64_bitmap_t *r) {
